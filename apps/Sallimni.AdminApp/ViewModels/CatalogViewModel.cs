@@ -1,0 +1,121 @@
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Sallimni.AdminApp.Models;
+using Sallimni.AdminApp.Services;
+
+namespace Sallimni.AdminApp.ViewModels;
+
+/// <summary>خيار شريحة ضريبة للعرض في القائمة.</summary>
+public record TaxOption(int Value, string Label)
+{
+    public override string ToString() => Label;
+}
+
+/// <summary>
+/// تأسيس الأصناف (قسم 2/3): الإدارة تنشئ التصنيفات وبطاقات الأصناف الرئيسية.
+/// </summary>
+public partial class CatalogViewModel : BaseViewModel
+{
+    private readonly ApiClient _api;
+    public CatalogViewModel(ApiClient api) => _api = api;
+
+    public ObservableCollection<CategoryDto> Categories { get; } = new();
+    public ObservableCollection<AdminProductDto> Products { get; } = new();
+
+    public List<TaxOption> TaxOptions { get; } = new()
+    {
+        new(-1, "معفى"), new(0, "0%"), new(2, "2%"), new(4, "4%"),
+        new(5, "5%"), new(10, "10%"), new(16, "16%")
+    };
+
+    // نموذج إضافة صنف
+    [ObservableProperty] private string _nameAr = "";
+    [ObservableProperty] private string _nameEn = "";
+    [ObservableProperty] private string _barcode = "";
+    [ObservableProperty] private string _unitSize = "";
+    [ObservableProperty] private string _emoji = "";
+    [ObservableProperty] private string _description = "";
+    [ObservableProperty] private CategoryDto? _selectedCategory;
+    [ObservableProperty] private TaxOption? _selectedTax;
+
+    // نموذج إضافة تصنيف
+    [ObservableProperty] private string _catNameAr = "";
+    [ObservableProperty] private string _catNameEn = "";
+    [ObservableProperty] private string _catIcon = "";
+
+    public bool HasProducts => Products.Count > 0;
+
+    [RelayCommand]
+    private async Task LoadAsync()
+    {
+        if (IsBusy) return;
+        IsBusy = true; ErrorMessage = null;
+        try
+        {
+            var cats = await _api.GetCategoriesAsync();
+            Categories.Clear();
+            foreach (var c in cats) Categories.Add(c);
+            SelectedCategory ??= Categories.FirstOrDefault();
+            SelectedTax ??= TaxOptions.Last(); // 16% افتراضي
+
+            var prods = await _api.GetProductsAsync();
+            Products.Clear();
+            foreach (var p in prods) Products.Add(p);
+        }
+        catch (Exception ex) { ErrorMessage = ex.Message; }
+        finally { IsBusy = false; OnPropertyChanged(nameof(HasProducts)); }
+    }
+
+    [RelayCommand]
+    private async Task AddProductAsync()
+    {
+        StatusMessage = null; ErrorMessage = null;
+        if (string.IsNullOrWhiteSpace(NameAr)) { ErrorMessage = "الاسم بالعربية مطلوب."; return; }
+        if (SelectedCategory is null) { ErrorMessage = "اختر تصنيفاً."; return; }
+        if (IsBusy) return;
+        IsBusy = true;
+        try
+        {
+            await _api.CreateProductAsync(new CreateProductRequest
+            {
+                NameAr = NameAr.Trim(),
+                NameEn = NameEn.Trim(),
+                Barcode = string.IsNullOrWhiteSpace(Barcode) ? null : Barcode.Trim(),
+                UnitSize = string.IsNullOrWhiteSpace(UnitSize) ? null : UnitSize.Trim(),
+                Emoji = string.IsNullOrWhiteSpace(Emoji) ? null : Emoji.Trim(),
+                Description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim(),
+                CategoryId = SelectedCategory.Id,
+                TaxClass = SelectedTax?.Value ?? 16
+            });
+            StatusMessage = "تمت إضافة الصنف ✔";
+            NameAr = NameEn = Barcode = UnitSize = Emoji = Description = "";
+            await LoadAsync();
+        }
+        catch (Exception ex) { ErrorMessage = ex.Message; }
+        finally { IsBusy = false; }
+    }
+
+    [RelayCommand]
+    private async Task AddCategoryAsync()
+    {
+        StatusMessage = null; ErrorMessage = null;
+        if (string.IsNullOrWhiteSpace(CatNameAr)) { ErrorMessage = "اسم التصنيف بالعربية مطلوب."; return; }
+        if (IsBusy) return;
+        IsBusy = true;
+        try
+        {
+            await _api.CreateCategoryAsync(new CreateCategoryRequest
+            {
+                NameAr = CatNameAr.Trim(),
+                NameEn = CatNameEn.Trim(),
+                Icon = string.IsNullOrWhiteSpace(CatIcon) ? null : CatIcon.Trim()
+            });
+            StatusMessage = "تمت إضافة التصنيف ✔";
+            CatNameAr = CatNameEn = CatIcon = "";
+            await LoadAsync();
+        }
+        catch (Exception ex) { ErrorMessage = ex.Message; }
+        finally { IsBusy = false; }
+    }
+}

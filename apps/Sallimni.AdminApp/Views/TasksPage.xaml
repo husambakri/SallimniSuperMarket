@@ -14,6 +14,8 @@
         <VerticalStackLayout Padding="14" Spacing="12">
 
             <Label Text="{svc:Translate Key=tasks.title}" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
+            <Label Text="تظهر الموجات تلقائياً عند تأكيد الزبائن لطلباتهم؛ ومنها تُنشئ مهمة تجميع (من المتاجر) ومهمة توزيع (للزبائن) وتُسندها لسائق."
+                   FontSize="12" TextColor="{StaticResource Gray500}" />
             <Label Text="{Binding ErrorMessage}" TextColor="Red" FontSize="12"
                    IsVisible="{Binding ErrorMessage, Converter={StaticResource NotNull}}" />
 

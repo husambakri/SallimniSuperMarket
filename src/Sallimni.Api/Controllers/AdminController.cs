@@ -20,16 +20,25 @@ public class AdminController : ControllerBase
     [HttpPost("categories")]
     public async Task<ActionResult<CategoryDto>> CreateCategory([FromBody] CreateCategoryRequest req, CancellationToken ct)
     {
-        var c = await _admin.CreateCategoryAsync(req.NameAr, req.NameEn, ct);
+        var c = await _admin.CreateCategoryAsync(req.NameAr, req.NameEn, req.Icon, ct);
         return new CategoryDto(c.Id, c.NameAr, c.NameEn);
     }
 
+    /// <summary>قائمة الأصناف (للإدارة).</summary>
+    [HttpGet("products")]
+    public async Task<ActionResult<List<AdminProductDto>>> GetProducts(CancellationToken ct)
+        => (await _admin.GetProductsAsync(ct)).Select(p => new AdminProductDto(
+            p.Id, p.NameAr, p.NameEn, p.Barcode, p.UnitSize, p.Emoji, p.TaxClass,
+            p.CategoryId, p.CategoryNameAr, p.MerchantCount, p.IsActive)).ToList();
+
+    /// <summary>تأسيس بطاقة صنف رئيسية.</summary>
     [HttpPost("products")]
     public async Task<IActionResult> CreateProduct([FromBody] CreateProductRequest req, CancellationToken ct)
     {
         try
         {
-            var p = await _admin.CreateProductAsync(req.NameAr, req.NameEn, req.Barcode, req.UnitSize, req.CategoryId, req.TaxClass, ct);
+            var p = await _admin.CreateProductAsync(req.NameAr, req.NameEn, req.Barcode, req.UnitSize,
+                req.Emoji, req.Description, req.CategoryId, req.TaxClass, ct);
             return Ok(new { p.Id });
         }
         catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }

@@ -41,6 +41,7 @@ internal static class Strings
     public static readonly Dictionary<string, Pair> Table = new()
     {
         ["app.title"] = new("سلّمني إدارة", "Sallimni Admin"),
+        ["tab.catalog"] = new("الأصناف", "Catalog"),
         ["tab.approvals"] = new("الاعتمادات", "Approvals"),
         ["tab.tasks"] = new("المهام", "Tasks"),
         ["tab.settlements"] = new("التسويات", "Settlements"),

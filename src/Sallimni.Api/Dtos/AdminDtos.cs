@@ -3,10 +3,13 @@ using Sallimni.Domain.Enums;
 namespace Sallimni.Api.Dtos;
 
 public record CategoryDto(Guid Id, string NameAr, string NameEn);
-public record CreateCategoryRequest(string NameAr, string NameEn);
+public record CreateCategoryRequest(string NameAr, string NameEn, string? Icon);
 
 public record CreateProductRequest(string NameAr, string NameEn, string? Barcode,
-    string? UnitSize, Guid CategoryId, TaxClass TaxClass);
+    string? UnitSize, string? Emoji, string? Description, Guid CategoryId, TaxClass TaxClass);
+
+public record AdminProductDto(Guid Id, string NameAr, string NameEn, string? Barcode, string? UnitSize,
+    string? Emoji, int TaxClass, Guid CategoryId, string CategoryNameAr, int MerchantCount, bool IsActive);
 
 public record AdminSubmissionDto(Guid Id, Guid MerchantId, string NameAr, string NameEn,
     string? Barcode, string? UnitSize, TaxClass SuggestedTaxClass, DateTimeOffset CreatedAt);

@@ -19,6 +19,16 @@ public class ApiClient
     public async Task<List<CategoryDto>> GetCategoriesAsync(CancellationToken ct = default)
         => await _http.GetFromJsonAsync<List<CategoryDto>>("api/admin/categories", JsonOpts, ct) ?? new();
 
+    // تأسيس الأصناف
+    public async Task<List<AdminProductDto>> GetProductsAsync(CancellationToken ct = default)
+        => await _http.GetFromJsonAsync<List<AdminProductDto>>("api/admin/products", JsonOpts, ct) ?? new();
+
+    public async Task CreateProductAsync(CreateProductRequest req, CancellationToken ct = default)
+        => await EnsureOk(await _http.PostAsJsonAsync("api/admin/products", req, JsonOpts, ct), ct);
+
+    public async Task CreateCategoryAsync(CreateCategoryRequest req, CancellationToken ct = default)
+        => await EnsureOk(await _http.PostAsJsonAsync("api/admin/categories", req, JsonOpts, ct), ct);
+
     public async Task ApproveSubmissionAsync(Guid id, Guid categoryId, CancellationToken ct = default)
         => await EnsureOk(await _http.PostAsJsonAsync($"api/admin/submissions/{id}/approve", new { CategoryId = categoryId }, JsonOpts, ct), ct);
 

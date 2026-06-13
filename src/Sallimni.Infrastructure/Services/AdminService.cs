@@ -18,6 +18,9 @@ public record TaskRow(Guid TaskId, TaskType Type, Domain.Enums.TaskStatus Status
 public record SettlementRow(Guid SubOrderId, Guid MerchantId, string MerchantName,
     SubOrderStatus Status, decimal SubtotalInclTax, decimal CommissionAmount, decimal MerchantPayout);
 
+public record AdminProductRow(Guid Id, string NameAr, string NameEn, string? Barcode, string? UnitSize,
+    string? Emoji, int TaxClass, Guid CategoryId, string CategoryNameAr, int MerchantCount, bool IsActive);
+
 /// <summary>
 /// خدمات الإدارة (قسم 2): تأسيس الأصناف واعتماد طلبات التجار، إنشاء مهام التوصيل،
 /// ضبط العمولة والموجات، والتسويات.
@@ -35,31 +38,50 @@ public class AdminService
     // ===== الكتالوج واعتماد الطلبات =====
 
     public async Task<List<Category>> GetCategoriesAsync(CancellationToken ct = default)
-        => await _db.Categories.OrderBy(c => c.NameAr).ToListAsync(ct);
+        => await _db.Categories.OrderBy(c => c.SortOrder).ThenBy(c => c.NameAr).ToListAsync(ct);
 
-    public async Task<Category> CreateCategoryAsync(string nameAr, string nameEn, CancellationToken ct = default)
+    public async Task<Category> CreateCategoryAsync(string nameAr, string nameEn, string? icon, CancellationToken ct = default)
     {
-        var c = new Category { NameAr = nameAr, NameEn = nameEn };
+        var nextSort = (await _db.Categories.MaxAsync(c => (int?)c.SortOrder, ct) ?? 0) + 1;
+        var c = new Category
+        {
+            NameAr = nameAr, NameEn = nameEn,
+            Icon = string.IsNullOrWhiteSpace(icon) ? "📦" : icon, SortOrder = nextSort
+        };
         _db.Categories.Add(c);
         await _db.SaveChangesAsync(ct);
         return c;
     }
 
+    /// <summary>تأسيس بطاقة صنف رئيسية (تملكها الإدارة — قسم 3).</summary>
     public async Task<Product> CreateProductAsync(
-        string nameAr, string nameEn, string? barcode, string? unitSize,
-        Guid categoryId, TaxClass taxClass, CancellationToken ct = default)
+        string nameAr, string nameEn, string? barcode, string? unitSize, string? emoji,
+        string? description, Guid categoryId, TaxClass taxClass, CancellationToken ct = default)
     {
         if (!await _db.Categories.AnyAsync(c => c.Id == categoryId, ct))
             throw new InvalidOperationException("التصنيف غير موجود.");
+        if (string.IsNullOrWhiteSpace(nameAr))
+            throw new InvalidOperationException("الاسم بالعربية مطلوب.");
         var p = new Product
         {
-            NameAr = nameAr, NameEn = nameEn, Barcode = barcode,
-            UnitSize = unitSize, CategoryId = categoryId, TaxClass = taxClass
+            NameAr = nameAr, NameEn = nameEn, Barcode = barcode, UnitSize = unitSize,
+            Emoji = string.IsNullOrWhiteSpace(emoji) ? "🛒" : emoji,
+            Description = description, CategoryId = categoryId, TaxClass = taxClass
         };
         _db.Products.Add(p);
         await _db.SaveChangesAsync(ct);
         return p;
     }
+
+    /// <summary>قائمة الأصناف للإدارة (مع اسم التصنيف وعدد التجار الذين يبيعونها).</summary>
+    public async Task<List<AdminProductRow>> GetProductsAsync(CancellationToken ct = default)
+        => await _db.Products
+            .OrderByDescending(p => p.CreatedAt)
+            .Select(p => new AdminProductRow(
+                p.Id, p.NameAr, p.NameEn, p.Barcode, p.UnitSize, p.Emoji,
+                (int)p.TaxClass, p.CategoryId, p.Category!.NameAr,
+                p.MerchantProducts.Count(mp => mp.IsAvailable), p.IsActive))
+            .ToListAsync(ct);
 
     public async Task<List<ProductSubmission>> GetPendingSubmissionsAsync(CancellationToken ct = default)
         => await _db.ProductSubmissions

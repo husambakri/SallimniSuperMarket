@@ -9,6 +9,8 @@
     Title="سلّمني إدارة">
 
     <TabBar>
+        <ShellContent Title="{svc:Translate Key=tab.catalog}"
+                      ContentTemplate="{DataTemplate views:CatalogPage}" Route="catalog" />
         <ShellContent Title="{svc:Translate Key=tab.approvals}"
                       ContentTemplate="{DataTemplate views:ApprovalsPage}" Route="approvals" />
         <ShellContent Title="{svc:Translate Key=tab.tasks}"

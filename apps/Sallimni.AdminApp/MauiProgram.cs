@@ -32,11 +32,13 @@ public static class MauiProgram
 			c.Timeout = TimeSpan.FromSeconds(20);
 		});
 
+		builder.Services.AddTransient<CatalogViewModel>();
 		builder.Services.AddTransient<ApprovalsViewModel>();
 		builder.Services.AddTransient<TasksViewModel>();
 		builder.Services.AddTransient<SettlementsViewModel>();
 		builder.Services.AddTransient<SettingsViewModel>();
 
+		builder.Services.AddTransient<CatalogPage>();
 		builder.Services.AddTransient<ApprovalsPage>();
 		builder.Services.AddTransient<TasksPage>();
 		builder.Services.AddTransient<SettlementsPage>();

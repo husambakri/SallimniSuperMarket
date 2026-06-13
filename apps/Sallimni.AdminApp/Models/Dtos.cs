@@ -8,6 +8,41 @@ public class CategoryDto
     public override string ToString() => NameAr;
 }
 
+public class AdminProductDto
+{
+    public Guid Id { get; set; }
+    public string NameAr { get; set; } = "";
+    public string NameEn { get; set; } = "";
+    public string? Barcode { get; set; }
+    public string? UnitSize { get; set; }
+    public string? Emoji { get; set; }
+    public int TaxClass { get; set; }
+    public Guid CategoryId { get; set; }
+    public string CategoryNameAr { get; set; } = "";
+    public int MerchantCount { get; set; }
+    public bool IsActive { get; set; }
+    public string Glyph => string.IsNullOrEmpty(Emoji) ? "🛒" : Emoji!;
+}
+
+public class CreateProductRequest
+{
+    public string NameAr { get; set; } = "";
+    public string NameEn { get; set; } = "";
+    public string? Barcode { get; set; }
+    public string? UnitSize { get; set; }
+    public string? Emoji { get; set; }
+    public string? Description { get; set; }
+    public Guid CategoryId { get; set; }
+    public int TaxClass { get; set; } = 16;
+}
+
+public class CreateCategoryRequest
+{
+    public string NameAr { get; set; } = "";
+    public string NameEn { get; set; } = "";
+    public string? Icon { get; set; }
+}
+
 public class AdminSubmissionDto
 {
     public Guid Id { get; set; }
