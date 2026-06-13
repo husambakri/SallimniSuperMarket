@@ -1,0 +1,23 @@
+<?xml version = "1.0" encoding = "UTF-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:Sallimni.MerchantApp"
+             xmlns:svc="clr-namespace:Sallimni.MerchantApp.Services"
+             x:Class="Sallimni.MerchantApp.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <svc:BoolToFlowDirectionConverter x:Key="FlowDir" />
+            <svc:PriceConverter x:Key="Price" />
+            <svc:InvertedBoolConverter x:Key="Invert" />
+            <svc:NotNullConverter x:Key="NotNull" />
+            <svc:SubOrderStatusConverter x:Key="SubStatus" />
+            <svc:IntEqualsConverter x:Key="IntEq" />
+            <svc:SubmissionStatusConverter x:Key="SubmStatus" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

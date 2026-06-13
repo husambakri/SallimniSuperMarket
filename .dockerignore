@@ -1,0 +1,11 @@
+# لا حاجة لأي شيء خارج الـ Backend داخل صورة Docker.
+apps/
+**/bin/
+**/obj/
+**/.vs/
+*.user
+*.md
+.git/
+.gitignore
+Dockerfile
+.dockerignore

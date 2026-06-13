@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Sallimni.CustomerApp.ViewModels"
+             xmlns:m="clr-namespace:Sallimni.CustomerApp.Models"
+             xmlns:svc="clr-namespace:Sallimni.CustomerApp.Services"
+             x:Class="Sallimni.CustomerApp.Views.ProductsPage"
+             x:Name="Page"
+             x:DataType="vm:ProductsViewModel"
+             FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
+             Title="{Binding Title}">
+
+    <RefreshView IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
+        <CollectionView ItemsSource="{Binding Products}" Margin="10">
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical" Span="2" HorizontalItemSpacing="10" VerticalItemSpacing="10" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.EmptyView>
+                <Label Text="{svc:Translate Key=common.loading}" HorizontalOptions="Center" Margin="0,40" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="m:ProductDto">
+                    <Border StrokeShape="RoundRectangle 16" StrokeThickness="1" Stroke="{StaticResource Gray200}" Padding="0">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer
+                                Command="{Binding Source={x:Reference Page}, Path=BindingContext.OpenProductCommand}"
+                                CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" Padding="10" RowSpacing="4">
+
+                            <!-- صورة (رمز) + شارة التوفير -->
+                            <Grid Grid.Row="0" HeightRequest="90">
+                                <Label Text="{Binding Glyph}" FontSize="52" HorizontalOptions="Center" VerticalOptions="Center" />
+                                <Border IsVisible="{Binding HasSavings}" BackgroundColor="#FFF3C4" Padding="6,2"
+                                        StrokeShape="RoundRectangle 8" StrokeThickness="0"
+                                        HorizontalOptions="Start" VerticalOptions="Start">
+                                    <Label Text="{Binding SavingsText}" FontSize="10" FontAttributes="Bold" TextColor="#9A6700" />
+                                </Border>
+                            </Grid>
+
+                            <Label Grid.Row="1" Text="{Binding NameAr}" FontSize="14" FontAttributes="Bold" TextColor="{StaticResource Gray900}" MaxLines="2" />
+                            <Label Grid.Row="2" Text="{Binding UnitSize}" FontSize="11" TextColor="{StaticResource Gray400}" />
+
+                            <!-- السعر + السعر العادي المشطوب + زرّ الإضافة -->
+                            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" VerticalOptions="End">
+                                <VerticalStackLayout Grid.Column="0" Spacing="0">
+                                    <HorizontalStackLayout Spacing="3">
+                                        <Label Text="{Binding CheapestPriceInclTax, Converter={StaticResource Price}}" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
+                                        <Label Text="{svc:Translate Key=common.currency}" FontSize="11" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                    <Label IsVisible="{Binding HasSavings}" FontSize="11" TextColor="{StaticResource Gray400}"
+                                           TextDecorations="Strikethrough"
+                                           Text="{Binding RegularPriceInclTax, Converter={StaticResource Price}}" />
+                                </VerticalStackLayout>
+
+                                <Button Grid.Column="1" Text="+" FontSize="20" FontAttributes="Bold"
+                                        WidthRequest="40" HeightRequest="40" Padding="0" CornerRadius="20"
+                                        BackgroundColor="{StaticResource Primary}" TextColor="White" VerticalOptions="End"
+                                        Command="{Binding Source={x:Reference Page}, Path=BindingContext.AddToCartCommand}"
+                                        CommandParameter="{Binding .}" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </RefreshView>
+</ContentPage>

@@ -1,0 +1,67 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Sallimni.CustomerApp.Models;
+using Sallimni.CustomerApp.Services;
+
+namespace Sallimni.CustomerApp.ViewModels;
+
+/// <summary>
+/// فحص السعر بالباركود (Scan-to-Compare, قسم 4.1).
+/// يُرسل رقم الباركود فقط للخادم، ويعرض سعرنا (أرخص تاجر شامل الضريبة) أو "غير متوفر".
+/// مسح الكاميرا الحيّ يُضاف على الأجهزة عبر مكتبة مسح (ZXing/ML Kit) — هنا إدخال يدوي + نتيجة.
+/// </summary>
+public partial class ScanViewModel : BaseViewModel
+{
+    private readonly ApiClient _api;
+    private readonly CartService _cart;
+    private readonly AppState _state;
+
+    public ScanViewModel(ApiClient api, CartService cart, AppState state)
+    {
+        _api = api;
+        _cart = cart;
+        _state = state;
+    }
+
+    [ObservableProperty] private string _barcode = "";
+    [ObservableProperty] private bool _hasResult;
+    [ObservableProperty] private BarcodeLookupDto? _result;
+
+    [RelayCommand]
+    private async Task LookupAsync()
+    {
+        var code = (Barcode ?? "").Trim();
+        if (code.Length == 0 || IsBusy) return;
+        IsBusy = true;
+        ErrorMessage = null;
+        HasResult = false;
+        try
+        {
+            Result = await _api.LookupBarcodeAsync(code, _state.CurrentCustomer?.Id);
+            HasResult = true;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally { IsBusy = false; }
+    }
+
+    public bool CanAddResult => Result is { Found: true, ProductId: not null, OurPriceInclTax: not null };
+
+    [RelayCommand]
+    private void AddResultToCart()
+    {
+        if (!CanAddResult) return;
+        _cart.Add(new ProductDto
+        {
+            Id = Result!.ProductId!.Value,
+            NameAr = Result.NameAr ?? "",
+            NameEn = Result.NameEn ?? "",
+            ImageUrl = Result.ImageUrl,
+            CheapestPriceInclTax = Result.OurPriceInclTax
+        });
+    }
+
+    partial void OnResultChanged(BarcodeLookupDto? value) => OnPropertyChanged(nameof(CanAddResult));
+}

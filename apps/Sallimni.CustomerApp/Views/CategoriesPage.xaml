@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Sallimni.CustomerApp.ViewModels"
+             xmlns:m="clr-namespace:Sallimni.CustomerApp.Models"
+             xmlns:svc="clr-namespace:Sallimni.CustomerApp.Services"
+             x:Class="Sallimni.CustomerApp.Views.CategoriesPage"
+             x:Name="Page"
+             x:DataType="vm:CategoriesViewModel"
+             FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
+             Shell.NavBarIsVisible="False"
+             Title="{svc:Translate Key=tab.shop}">
+
+    <RefreshView IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
+        <CollectionView ItemsSource="{Binding Categories}">
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical" Span="3" HorizontalItemSpacing="10" VerticalItemSpacing="10" />
+            </CollectionView.ItemsLayout>
+
+            <CollectionView.Header>
+                <VerticalStackLayout x:DataType="vm:CategoriesViewModel" BindingContext="{Binding Source={x:Reference Page}, Path=BindingContext}">
+
+                    <!-- ترويسة الهوية: الاسم + توصيل مجاني + إجمالي السلّة -->
+                    <Border BackgroundColor="{StaticResource Primary}" Padding="16,14" StrokeThickness="0">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="8">
+                            <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="1">
+                                <Label Text="🛒 سلّمني" FontSize="22" FontAttributes="Bold" TextColor="White" />
+                                <Label Text="{svc:Translate Key=catalog.subtitle}" FontSize="11" TextColor="#FFE0B2" />
+                            </VerticalStackLayout>
+                            <Border Grid.Row="0" Grid.Column="1" BackgroundColor="White" Padding="10,5" StrokeShape="RoundRectangle 14" StrokeThickness="0" VerticalOptions="Center">
+                                <HorizontalStackLayout Spacing="5">
+                                    <Label Text="🛍" FontSize="14" VerticalOptions="Center" />
+                                    <Label Text="{Binding Cart.Total, Converter={StaticResource Price}}" FontSize="14" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
+                                    <Label Text="{svc:Translate Key=common.currency}" FontSize="11" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+                            </Border>
+
+                            <!-- شريط البحث -->
+                            <Border Grid.Row="1" Grid.ColumnSpan="2" BackgroundColor="White" Padding="6,2" StrokeShape="RoundRectangle 22" StrokeThickness="0">
+                                <Grid ColumnDefinitions="Auto,*">
+                                    <Label Grid.Column="0" Text="🔍" FontSize="16" VerticalOptions="Center" Margin="8,0,0,0" />
+                                    <Entry Grid.Column="1" Placeholder="{svc:Translate Key=home.search}" Text="{Binding SearchText}"
+                                           ReturnCommand="{Binding SearchCommand}" BackgroundColor="Transparent" />
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- شارة توصيل مجاني -->
+                    <Border BackgroundColor="#E8F5E9" Padding="12,6" StrokeThickness="0">
+                        <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
+                            <Label Text="🚚" FontSize="14" />
+                            <Label Text="{svc:Translate Key=home.freedelivery}" FontSize="13" FontAttributes="Bold" TextColor="#2E7D32" />
+                        </HorizontalStackLayout>
+                    </Border>
+
+                    <!-- شريط العروض (أعلى توفير) -->
+                    <VerticalStackLayout IsVisible="{Binding HasOffers}" Padding="14,12,14,4" Spacing="8">
+                        <Label Text="{svc:Translate Key=home.offers}" FontSize="17" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
+                        <CollectionView ItemsSource="{Binding Offers}" HeightRequest="170">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="m:ProductDto">
+                                    <Border WidthRequest="130" StrokeShape="RoundRectangle 14" StrokeThickness="1" Stroke="{StaticResource Gray200}" Padding="8">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={x:Reference Page}, Path=BindingContext.OpenProductCommand}" CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <VerticalStackLayout Spacing="3">
+                                            <Grid HeightRequest="60">
+                                                <Label Text="{Binding Glyph}" FontSize="40" HorizontalOptions="Center" VerticalOptions="Center" />
+                                                <Border BackgroundColor="#FFF3C4" Padding="5,1" StrokeShape="RoundRectangle 7" StrokeThickness="0" HorizontalOptions="Start" VerticalOptions="Start">
+                                                    <Label Text="{Binding SavingsText}" FontSize="9" FontAttributes="Bold" TextColor="#9A6700" />
+                                                </Border>
+                                            </Grid>
+                                            <Label Text="{Binding NameAr}" FontSize="12" FontAttributes="Bold" MaxLines="1" />
+                                            <HorizontalStackLayout Spacing="3">
+                                                <Label Text="{Binding CheapestPriceInclTax, Converter={StaticResource Price}}" FontSize="13" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
+                                                <Label Text="{Binding RegularPriceInclTax, Converter={StaticResource Price}}" FontSize="10" TextColor="{StaticResource Gray400}" TextDecorations="Strikethrough" VerticalOptions="Center" />
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+
+                    <Label Text="{svc:Translate Key=tab.shop}" FontSize="17" FontAttributes="Bold" Margin="14,8,14,4" TextColor="{StaticResource Gray900}" />
+                </VerticalStackLayout>
+            </CollectionView.Header>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="m:CategoryDto">
+                    <Border StrokeShape="RoundRectangle 16" StrokeThickness="1" Stroke="{StaticResource Gray200}" Padding="6,14" Margin="6,0">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer
+                                Command="{Binding Source={x:Reference Page}, Path=BindingContext.OpenCategoryCommand}"
+                                CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
+                            <Label Text="{Binding Icon}" FontSize="40" HorizontalOptions="Center" />
+                            <Label Text="{Binding NameAr}" FontSize="13" FontAttributes="Bold" HorizontalTextAlignment="Center" TextColor="{StaticResource Gray900}" />
+                            <Label FontSize="11" TextColor="{StaticResource Gray400}" HorizontalTextAlignment="Center">
+                                <Label.FormattedText><FormattedString>
+                                    <Span Text="{Binding ProductCount}" /><Span Text=" " /><Span Text="{svc:Translate Key=catalog.products}" />
+                                </FormattedString></Label.FormattedText>
+                            </Label>
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </RefreshView>
+</ContentPage>

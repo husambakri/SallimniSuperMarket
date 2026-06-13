@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Sallimni.AdminApp.ViewModels"
+             xmlns:m="clr-namespace:Sallimni.AdminApp.Models"
+             xmlns:svc="clr-namespace:Sallimni.AdminApp.Services"
+             x:Class="Sallimni.AdminApp.Views.ApprovalsPage"
+             x:DataType="vm:ApprovalsViewModel"
+             FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
+             Title="{svc:Translate Key=tab.approvals}">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+        <Border Grid.Row="0" BackgroundColor="{StaticResource Primary}" Padding="16,12" StrokeThickness="0">
+            <Label Text="{svc:Translate Key=appr.title}" FontSize="18" FontAttributes="Bold" TextColor="White" />
+        </Border>
+
+        <HorizontalStackLayout Grid.Row="1" Padding="14,8" Spacing="8">
+            <Label Text="{svc:Translate Key=appr.category}" VerticalOptions="Center" FontSize="13" TextColor="{StaticResource Gray600}" />
+            <Picker ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" WidthRequest="220" />
+        </HorizontalStackLayout>
+
+        <Label Grid.Row="2" IsVisible="{Binding IsEmpty}" Text="{svc:Translate Key=appr.empty}"
+               HorizontalOptions="Center" VerticalOptions="Center" TextColor="{StaticResource Gray400}" />
+
+        <RefreshView Grid.Row="2" IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
+            <CollectionView ItemsSource="{Binding Submissions}" Margin="10">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="m:AdminSubmissionDto">
+                        <Border Margin="0,5" Padding="14" StrokeShape="RoundRectangle 14" StrokeThickness="1" Stroke="{StaticResource Gray200}">
+                            <VerticalStackLayout Spacing="8">
+                                <Label Text="{Binding NameAr}" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Gray900}" />
+                                <HorizontalStackLayout Spacing="12">
+                                    <Label FontSize="12" TextColor="{StaticResource Gray500}">
+                                        <Label.FormattedText><FormattedString>
+                                            <Span Text="{svc:Translate Key=appr.barcode}" /><Span Text=": " /><Span Text="{Binding Barcode}" />
+                                        </FormattedString></Label.FormattedText>
+                                    </Label>
+                                    <Label FontSize="12" TextColor="{StaticResource Gray500}">
+                                        <Label.FormattedText><FormattedString>
+                                            <Span Text="{svc:Translate Key=appr.tax}" /><Span Text=": " /><Span Text="{Binding SuggestedTaxClass}" /><Span Text="%" />
+                                        </FormattedString></Label.FormattedText>
+                                    </Label>
+                                </HorizontalStackLayout>
+
+                                <HorizontalStackLayout Spacing="8">
+                                    <Button Text="{svc:Translate Key=appr.approve}"
+                                            BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="18" Padding="20,6"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type CollectionView}}, Path=BindingContext.ApproveCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    <Button Text="{svc:Translate Key=appr.reject}"
+                                            BackgroundColor="{StaticResource Gray100}" TextColor="{StaticResource Gray900}" CornerRadius="18" Padding="20,6"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type CollectionView}}, Path=BindingContext.RejectCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

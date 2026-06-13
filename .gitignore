@@ -1,0 +1,30 @@
+# مخرجات البناء
+**/bin/
+**/obj/
+[Bb]in/
+[Oo]bj/
+
+# مجلدات أدوات
+.vs/
+.idea/
+*.user
+*.suo
+
+# MAUI / .NET
+*.binlog
+project.lock.json
+artifacts/
+
+# Android
+**/Resources/Resource.designer.cs
+*.keystore
+
+# ملفات محلّية
+*.log
+api*.log
+app-*.log
+*.DesktopDirectory
+
+# أسرار
+appsettings.*.Local.json
+.env

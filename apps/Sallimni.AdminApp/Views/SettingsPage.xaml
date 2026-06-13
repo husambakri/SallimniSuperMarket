@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Sallimni.AdminApp.ViewModels"
+             xmlns:svc="clr-namespace:Sallimni.AdminApp.Services"
+             x:Class="Sallimni.AdminApp.Views.SettingsPage"
+             x:DataType="vm:SettingsViewModel"
+             FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
+             Title="{svc:Translate Key=tab.settings}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+
+            <Label Text="{svc:Translate Key=cfg.title}" FontSize="22" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
+
+            <!-- العمولة -->
+            <VerticalStackLayout Spacing="4">
+                <Label Text="{svc:Translate Key=cfg.commission}" FontAttributes="Bold" />
+                <Entry Text="{Binding CommissionRate}" Keyboard="Numeric" />
+                <Label Text="{svc:Translate Key=cfg.commissionHint}" FontSize="11" TextColor="{StaticResource Gray400}" />
+            </VerticalStackLayout>
+
+            <BoxView HeightRequest="1" Color="{StaticResource Gray100}" />
+
+            <!-- إعداد الموجات -->
+            <Label Text="{svc:Translate Key=cfg.wave}" FontAttributes="Bold" />
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8">
+                <VerticalStackLayout Grid.Row="0" Grid.Column="0">
+                    <Label Text="{svc:Translate Key=cfg.interval}" FontSize="11" TextColor="{StaticResource Gray500}" />
+                    <Entry Text="{Binding WaveInterval}" Keyboard="Numeric" />
+                </VerticalStackLayout>
+                <VerticalStackLayout Grid.Row="0" Grid.Column="1">
+                    <Label Text="{svc:Translate Key=cfg.gap}" FontSize="11" TextColor="{StaticResource Gray500}" />
+                    <Entry Text="{Binding DistributionGap}" Keyboard="Numeric" />
+                </VerticalStackLayout>
+                <VerticalStackLayout Grid.Row="1" Grid.Column="0">
+                    <Label Text="{svc:Translate Key=cfg.prep}" FontSize="11" TextColor="{StaticResource Gray500}" />
+                    <Entry Text="{Binding PrepMinutes}" Keyboard="Numeric" />
+                </VerticalStackLayout>
+                <VerticalStackLayout Grid.Row="1" Grid.Column="1">
+                    <Label Text="{svc:Translate Key=cfg.transit}" FontSize="11" TextColor="{StaticResource Gray500}" />
+                    <Entry Text="{Binding TransitMinutes}" Keyboard="Numeric" />
+                </VerticalStackLayout>
+                <VerticalStackLayout Grid.Row="2" Grid.Column="0">
+                    <Label Text="{svc:Translate Key=cfg.maxcust}" FontSize="11" TextColor="{StaticResource Gray500}" />
+                    <Entry Text="{Binding MaxCustomers}" Keyboard="Numeric" />
+                </VerticalStackLayout>
+            </Grid>
+
+            <Button Text="{svc:Translate Key=cfg.save}" Command="{Binding SaveCommand}"
+                    BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="22" HeightRequest="46" FontAttributes="Bold" />
+            <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Primary}" FontAttributes="Bold"
+                   IsVisible="{Binding StatusMessage, Converter={StaticResource NotNull}}" />
+            <Label Text="{Binding ErrorMessage}" TextColor="Red"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource NotNull}}" />
+
+            <BoxView HeightRequest="1" Color="{StaticResource Gray100}" />
+
+            <!-- اللغة -->
+            <VerticalStackLayout Spacing="8">
+                <Label Text="{svc:Translate Key=cfg.language}" FontAttributes="Bold" />
+                <HorizontalStackLayout Spacing="10">
+                    <Button Text="{svc:Translate Key=cfg.arabic}" Command="{Binding SetArabicCommand}"
+                            BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="20" Padding="20,6" />
+                    <Button Text="{svc:Translate Key=cfg.english}" Command="{Binding SetEnglishCommand}"
+                            BackgroundColor="{StaticResource Gray100}" TextColor="{StaticResource Gray900}" CornerRadius="20" Padding="20,6" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+            <Label Text="{Binding ServerUrl}" FontSize="11" TextColor="{StaticResource Gray400}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

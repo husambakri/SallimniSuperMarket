@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Sallimni.CustomerApp.ViewModels"
+             xmlns:svc="clr-namespace:Sallimni.CustomerApp.Services"
+             x:Class="Sallimni.CustomerApp.Views.ScanPage"
+             x:DataType="vm:ScanViewModel"
+             FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
+             Title="{svc:Translate Key=tab.scan}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+
+            <Label Text="{svc:Translate Key=scan.title}" FontSize="22" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
+            <Label Text="{svc:Translate Key=scan.hint}" FontSize="13" TextColor="{StaticResource Gray500}" />
+
+            <!-- محاكاة الماسح: إطار كاميرا + إدخال يدوي للباركود -->
+            <Border StrokeShape="RoundRectangle 16" StrokeThickness="2" Stroke="{StaticResource Primary}"
+                    BackgroundColor="{StaticResource Gray100}" HeightRequest="150">
+                <Label Text="📷" FontSize="48" HorizontalOptions="Center" VerticalOptions="Center" />
+            </Border>
+            <Label Text="{svc:Translate Key=scan.camera_note}" FontSize="11" TextColor="{StaticResource Gray400}" />
+
+            <Entry Placeholder="{svc:Translate Key=scan.placeholder}" Text="{Binding Barcode}"
+                   Keyboard="Numeric" FontSize="16" />
+
+            <Button Text="{svc:Translate Key=scan.button}" Command="{Binding LookupCommand}"
+                    BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="22" />
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource Primary}" />
+
+            <!-- النتيجة: موجود -> سعرنا + أضف للسلة ؛ غير موجود -> رسالة فقط -->
+            <Border IsVisible="{Binding HasResult}" StrokeShape="RoundRectangle 16" Padding="18"
+                    StrokeThickness="1" Stroke="{StaticResource Gray200}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="{Binding Result.NameAr}" FontSize="18" FontAttributes="Bold"
+                           IsVisible="{Binding Result.Found}" />
+                    <HorizontalStackLayout Spacing="8" IsVisible="{Binding Result.Found}">
+                        <Label Text="{svc:Translate Key=scan.ourprice}" FontSize="14" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
+                        <Label Text="{Binding Result.OurPriceInclTax, Converter={StaticResource Price}}"
+                               FontSize="26" FontAttributes="Bold" TextColor="{StaticResource Primary}" />
+                        <Label Text="{svc:Translate Key=common.currency}" VerticalOptions="Center" TextColor="{StaticResource Gray500}" />
+                    </HorizontalStackLayout>
+
+                    <Button Text="{svc:Translate Key=catalog.add}" Command="{Binding AddResultToCartCommand}"
+                            IsVisible="{Binding CanAddResult}"
+                            BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="20" />
+
+                    <Label Text="{svc:Translate Key=scan.notfound}" FontSize="16" TextColor="{StaticResource Gray500}"
+                           IsVisible="{Binding Result.Found, Converter={StaticResource Invert}}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Label Text="{Binding ErrorMessage}" TextColor="Red" IsVisible="{Binding ErrorMessage, Converter={StaticResource NotNull}}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

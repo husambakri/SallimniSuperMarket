@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($d = \\(Get-Command dotnet -ErrorAction SilentlyContinue\\); if \\($d\\) { \"dotnet: $\\($d.Source\\)\"; dotnet --version } else { \"dotnet: NOT FOUND\" }; $n = \\(Get-Command node -ErrorAction SilentlyContinue\\); if \\($n\\) { \"node: $\\($n.Source\\)\"; node --version } else { \"node: NOT FOUND\" }; \"---\"; Get-ChildItem \"C:\\\\Users\\\\user\\\\Desktop\\\\sallimni Super market\" -Force | Select-Object Name)",
+      "PowerShell(winget --version)",
+      "PowerShell(winget install Microsoft.DotNet.SDK.9 --accept-source-agreements --accept-package-agreements --disable-interactivity 2>&1)",
+      "PowerShell(\"---\")",
+      "PowerShell($dotnet = \"$env:ProgramFiles\\\\dotnet\\\\dotnet.exe\"; if \\(Test-Path $dotnet\\) { & $dotnet --version; & $dotnet --list-sdks } else { \"checking PATH...\"; $env:Path = \"$env:ProgramFiles\\\\dotnet;\" + $env:Path; dotnet --version })"
+    ]
+  }
+}

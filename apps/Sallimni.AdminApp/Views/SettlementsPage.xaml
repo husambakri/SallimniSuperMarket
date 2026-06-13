@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Sallimni.AdminApp.ViewModels"
+             xmlns:m="clr-namespace:Sallimni.AdminApp.Models"
+             xmlns:svc="clr-namespace:Sallimni.AdminApp.Services"
+             x:Class="Sallimni.AdminApp.Views.SettlementsPage"
+             x:DataType="vm:SettlementsViewModel"
+             FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
+             Title="{svc:Translate Key=tab.settlements}">
+
+    <Grid RowDefinitions="Auto,*">
+        <Border Grid.Row="0" BackgroundColor="{StaticResource Primary}" Padding="16,12" StrokeThickness="0">
+            <Label Text="{svc:Translate Key=sett.title}" FontSize="18" FontAttributes="Bold" TextColor="White" />
+        </Border>
+
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
+            <CollectionView ItemsSource="{Binding Rows}" Margin="10">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="m:SettlementRowDto">
+                        <Border Margin="0,5" Padding="14" StrokeShape="RoundRectangle 14" StrokeThickness="1" Stroke="{StaticResource Gray200}">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="{Binding MerchantName}" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Gray900}" />
+                                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+                                    <VerticalStackLayout Grid.Column="0">
+                                        <Label Text="{svc:Translate Key=sett.subtotal}" FontSize="11" TextColor="{StaticResource Gray500}" />
+                                        <Label Text="{Binding SubtotalInclTax, Converter={StaticResource Price}}" FontSize="14" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="1">
+                                        <Label Text="{svc:Translate Key=sett.commission}" FontSize="11" TextColor="{StaticResource Gray500}" />
+                                        <Label Text="{Binding CommissionAmount, Converter={StaticResource Price}}" FontSize="14" TextColor="#C62828" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="2">
+                                        <Label Text="{svc:Translate Key=sett.payout}" FontSize="11" TextColor="{StaticResource Gray500}" />
+                                        <Label Text="{Binding MerchantPayout, Converter={StaticResource Price}}" FontSize="15" FontAttributes="Bold" TextColor="{StaticResource Primary}" />
+                                    </VerticalStackLayout>
+                                </Grid>
+
+                                <!-- 6 = مُسوّى -->
+                                <Button Text="{svc:Translate Key=sett.settle}"
+                                        IsVisible="{Binding Status, Converter={StaticResource NotIntEq}, ConverterParameter=6}"
+                                        BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="16" Padding="16,5" FontSize="13" HorizontalOptions="Start"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type CollectionView}}, Path=BindingContext.SettleCommand}"
+                                        CommandParameter="{Binding .}" />
+                                <Label Text="{svc:Translate Key=sett.settled}" FontSize="13" FontAttributes="Bold" TextColor="{StaticResource Tertiary}"
+                                       IsVisible="{Binding Status, Converter={StaticResource IntEq}, ConverterParameter=6}" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

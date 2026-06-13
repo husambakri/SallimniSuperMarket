@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="Sallimni.CustomerApp.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:Sallimni.CustomerApp.Views"
+    xmlns:svc="clr-namespace:Sallimni.CustomerApp.Services"
+    FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
+    Title="سلّمني">
+
+    <TabBar>
+        <ShellContent Title="{svc:Translate Key=tab.shop}"
+                      ContentTemplate="{DataTemplate views:CategoriesPage}"
+                      Route="categories" />
+        <ShellContent Title="{svc:Translate Key=tab.scan}"
+                      ContentTemplate="{DataTemplate views:ScanPage}"
+                      Route="scan" />
+        <ShellContent Title="{svc:Translate Key=tab.cart}"
+                      ContentTemplate="{DataTemplate views:CartPage}"
+                      Route="cart" />
+        <ShellContent Title="{svc:Translate Key=tab.settings}"
+                      ContentTemplate="{DataTemplate views:SettingsPage}"
+                      Route="settings" />
+    </TabBar>
+</Shell>

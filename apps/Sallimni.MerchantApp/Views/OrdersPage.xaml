@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Sallimni.MerchantApp.ViewModels"
+             xmlns:m="clr-namespace:Sallimni.MerchantApp.Models"
+             xmlns:svc="clr-namespace:Sallimni.MerchantApp.Services"
+             x:Class="Sallimni.MerchantApp.Views.OrdersPage"
+             x:DataType="vm:OrdersViewModel"
+             FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
+             Title="{svc:Translate Key=tab.orders}">
+
+    <Grid RowDefinitions="Auto,*">
+        <Border Grid.Row="0" BackgroundColor="{StaticResource Primary}" Padding="16,12" StrokeThickness="0">
+            <Label Text="{svc:Translate Key=orders.title}" FontSize="18" FontAttributes="Bold" TextColor="White" />
+        </Border>
+
+        <Label Grid.Row="1" IsVisible="{Binding IsEmpty}" Text="{svc:Translate Key=orders.empty}"
+               HorizontalOptions="Center" VerticalOptions="Center" TextColor="{StaticResource Gray400}" />
+
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
+            <CollectionView ItemsSource="{Binding Orders}" Margin="10">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="m:MerchantSubOrderDto">
+                        <Border Margin="0,5" Padding="14" StrokeShape="RoundRectangle 14" StrokeThickness="1" Stroke="{StaticResource Gray200}">
+                            <VerticalStackLayout Spacing="8">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label FontAttributes="Bold" FontSize="14" TextColor="{StaticResource PrimaryDark}">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="{svc:Translate Key=orders.order}" />
+                                                <Span Text=" #" />
+                                                <Span Text="{Binding SubOrderId}" />
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                    <Border Grid.Column="1" BackgroundColor="{StaticResource Secondary}" Padding="8,3" StrokeShape="RoundRectangle 10" StrokeThickness="0">
+                                        <Label Text="{Binding Status, Converter={StaticResource SubStatus}}" FontSize="12" TextColor="{StaticResource PrimaryDark}" />
+                                    </Border>
+                                </Grid>
+
+                                <CollectionView ItemsSource="{Binding Items}">
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate x:DataType="m:MerchantSubOrderItemDto">
+                                            <Grid ColumnDefinitions="*,Auto,Auto" Padding="0,2" ColumnSpacing="6">
+                                                <Label Grid.Column="0" Text="{Binding Name}" FontSize="14" />
+                                                <Label Grid.Column="1" Text="{Binding Quantity, StringFormat='×{0}'}" FontSize="13" TextColor="{StaticResource Gray500}" />
+                                                <Label Grid.Column="2" Text="{Binding UnitPriceInclTax, Converter={StaticResource Price}}" FontSize="14" FontAttributes="Bold" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+
+                                <BoxView HeightRequest="1" Color="{StaticResource Gray100}" />
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Text="{svc:Translate Key=orders.payout}" FontSize="12" TextColor="{StaticResource Gray500}" />
+                                    <HorizontalStackLayout Grid.Column="1" Spacing="4">
+                                        <Label Text="{Binding MerchantPayout, Converter={StaticResource Price}}" FontAttributes="Bold" FontSize="16" TextColor="{StaticResource Primary}" />
+                                        <Label Text="{svc:Translate Key=common.currency}" FontSize="12" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                </Grid>
+
+                                <HorizontalStackLayout Spacing="8">
+                                    <Button Text="{svc:Translate Key=orders.startprep}"
+                                            IsVisible="{Binding Status, Converter={StaticResource IntEq}, ConverterParameter=0}"
+                                            BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="18" Padding="16,6"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type CollectionView}}, Path=BindingContext.StartPrepCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    <Button Text="{svc:Translate Key=orders.ready}"
+                                            IsVisible="{Binding Status, Converter={StaticResource IntEq}, ConverterParameter=1}"
+                                            BackgroundColor="{StaticResource Tertiary}" TextColor="White" CornerRadius="18" Padding="16,6"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type CollectionView}}, Path=BindingContext.MarkReadyCommand}"
+                                            CommandParameter="{Binding .}" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

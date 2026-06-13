@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Sallimni.CustomerApp.ViewModels"
+             xmlns:svc="clr-namespace:Sallimni.CustomerApp.Services"
+             x:Class="Sallimni.CustomerApp.Views.CartPage"
+             x:DataType="vm:CartViewModel"
+             FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
+             Title="{svc:Translate Key=tab.cart}">
+
+    <Grid RowDefinitions="*,Auto">
+
+        <!-- سلّة فارغة -->
+        <Label Grid.Row="0" IsVisible="{Binding Cart.IsEmpty}" Text="{svc:Translate Key=cart.empty}"
+               HorizontalOptions="Center" VerticalOptions="Center" FontSize="16" TextColor="{StaticResource Gray400}" />
+
+        <CollectionView Grid.Row="0" ItemsSource="{Binding Cart.Items}" Margin="10"
+                        IsVisible="{Binding Cart.IsEmpty, Converter={StaticResource Invert}}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="svc:CartItem">
+                    <Border Margin="0,5" Padding="12" StrokeShape="RoundRectangle 12"
+                            StrokeThickness="1" Stroke="{StaticResource Gray200}">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                <Label Text="{Binding Product.NameAr}" FontAttributes="Bold" FontSize="15" />
+                                <HorizontalStackLayout Spacing="4">
+                                    <Label Text="{Binding UnitPrice, Converter={StaticResource Price}}" FontSize="12" TextColor="{StaticResource Gray500}" />
+                                    <Label Text="×" FontSize="12" TextColor="{StaticResource Gray500}" />
+                                    <Label Text="{Binding Quantity}" FontSize="12" TextColor="{StaticResource Gray500}" />
+                                    <Label Text="=" FontSize="12" TextColor="{StaticResource Gray500}" />
+                                    <Label Text="{Binding LineTotal, Converter={StaticResource Price}}" FontSize="13" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+
+                            <HorizontalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                <Button Text="−" WidthRequest="38" HeightRequest="38" Padding="0" CornerRadius="19"
+                                        BackgroundColor="{StaticResource Gray100}" TextColor="{StaticResource Gray900}"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}, Path=DecrementCommand}"
+                                        CommandParameter="{Binding .}" />
+                                <Label Text="{Binding Quantity}" WidthRequest="28" HorizontalTextAlignment="Center" VerticalOptions="Center" FontAttributes="Bold" />
+                                <Button Text="+" WidthRequest="38" HeightRequest="38" Padding="0" CornerRadius="19"
+                                        BackgroundColor="{StaticResource Primary}" TextColor="White"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}, Path=IncrementCommand}"
+                                        CommandParameter="{Binding .}" />
+                            </HorizontalStackLayout>
+
+                            <Button Grid.Column="2" Text="🗑" Padding="0" WidthRequest="38" HeightRequest="38"
+                                    BackgroundColor="Transparent" TextColor="{StaticResource Gray500}" VerticalOptions="Center"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}, Path=RemoveCommand}"
+                                    CommandParameter="{Binding .}" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- شريط الإجمالي والتأكيد -->
+        <Border Grid.Row="1" Padding="16" StrokeThickness="0" BackgroundColor="{StaticResource Gray100}"
+                IsVisible="{Binding Cart.IsEmpty, Converter={StaticResource Invert}}">
+            <VerticalStackLayout Spacing="10">
+                <Grid ColumnDefinitions="Auto,*">
+                    <Label Text="{svc:Translate Key=cart.address}" FontSize="12" TextColor="{StaticResource Gray500}" />
+                    <Label Grid.Column="1" Text="{Binding State.SelectedAddress.Label}" HorizontalTextAlignment="End" FontAttributes="Bold" FontSize="13" />
+                </Grid>
+
+                <Picker Title="{svc:Translate Key=cart.payment}" SelectedIndex="{Binding State.PaymentMethod}">
+                    <Picker.ItemsSource>
+                        <x:Array Type="{x:Type x:String}">
+                            <x:String>كاش</x:String>
+                            <x:String>كليك CliQ</x:String>
+                        </x:Array>
+                    </Picker.ItemsSource>
+                </Picker>
+
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Text="{svc:Translate Key=cart.total}" FontSize="15" VerticalOptions="Center" />
+                    <HorizontalStackLayout Grid.Column="1" Spacing="4">
+                        <Label Text="{Binding Cart.Total, Converter={StaticResource Price}}" FontSize="22" FontAttributes="Bold" TextColor="{StaticResource Primary}" />
+                        <Label Text="{svc:Translate Key=common.currency}" VerticalOptions="Center" TextColor="{StaticResource Gray500}" />
+                    </HorizontalStackLayout>
+                </Grid>
+
+                <Label Text="{Binding ErrorMessage}" TextColor="Red" FontSize="12"
+                       IsVisible="{Binding ErrorMessage, Converter={StaticResource NotNull}}" />
+
+                <Button Text="{svc:Translate Key=cart.checkout}" Command="{Binding CheckoutCommand}"
+                        IsEnabled="{Binding IsNotBusy}"
+                        BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="24" HeightRequest="50" FontAttributes="Bold" />
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>

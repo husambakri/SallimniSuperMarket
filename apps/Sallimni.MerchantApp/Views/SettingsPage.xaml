@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Sallimni.MerchantApp.ViewModels"
+             xmlns:m="clr-namespace:Sallimni.MerchantApp.Models"
+             xmlns:svc="clr-namespace:Sallimni.MerchantApp.Services"
+             x:Class="Sallimni.MerchantApp.Views.SettingsPage"
+             x:DataType="vm:SettingsViewModel"
+             FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
+             Title="{svc:Translate Key=tab.settings}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="18">
+
+            <Label Text="{svc:Translate Key=settings.title}" FontSize="22" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="{svc:Translate Key=settings.merchant}" FontAttributes="Bold" />
+                <Picker ItemsSource="{Binding Merchants}" SelectedItem="{Binding SelectedMerchant}" ItemDisplayBinding="{Binding Name}" />
+                <HorizontalStackLayout Spacing="6">
+                    <Label Text="{svc:Translate Key=settings.taxreg}" FontSize="12" TextColor="{StaticResource Gray500}" />
+                    <Label Text="{Binding IsTaxRegistered}" FontSize="12" FontAttributes="Bold" TextColor="{StaticResource Primary}" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+            <BoxView HeightRequest="1" Color="{StaticResource Gray100}" />
+
+            <VerticalStackLayout Spacing="8">
+                <Label Text="{svc:Translate Key=settings.language}" FontAttributes="Bold" />
+                <HorizontalStackLayout Spacing="10">
+                    <Button Text="{svc:Translate Key=settings.arabic}" Command="{Binding SetArabicCommand}"
+                            BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="20" Padding="20,6" />
+                    <Button Text="{svc:Translate Key=settings.english}" Command="{Binding SetEnglishCommand}"
+                            BackgroundColor="{StaticResource Gray100}" TextColor="{StaticResource Gray900}" CornerRadius="20" Padding="20,6" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+            <BoxView HeightRequest="1" Color="{StaticResource Gray100}" />
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="{svc:Translate Key=settings.server}" FontAttributes="Bold" />
+                <Label Text="{Binding ServerUrl}" TextColor="{StaticResource Gray600}" FontSize="12" />
+            </VerticalStackLayout>
+
+            <Button Text="{svc:Translate Key=settings.delete}" Command="{Binding DeleteAccountCommand}"
+                    BackgroundColor="#D32F2F" TextColor="White" CornerRadius="22" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

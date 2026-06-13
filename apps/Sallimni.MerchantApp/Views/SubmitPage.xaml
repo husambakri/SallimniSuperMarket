@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Sallimni.MerchantApp.ViewModels"
+             xmlns:m="clr-namespace:Sallimni.MerchantApp.Models"
+             xmlns:svc="clr-namespace:Sallimni.MerchantApp.Services"
+             x:Class="Sallimni.MerchantApp.Views.SubmitPage"
+             x:DataType="vm:SubmitViewModel"
+             FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
+             Title="{svc:Translate Key=tab.submit}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="18" Spacing="12">
+
+            <Label Text="{svc:Translate Key=submit.title}" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
+            <Label Text="{svc:Translate Key=submit.hint}" FontSize="12" TextColor="{StaticResource Gray500}" />
+
+            <Entry Placeholder="{svc:Translate Key=submit.namear}" Text="{Binding NameAr}" />
+            <Entry Placeholder="{svc:Translate Key=submit.nameen}" Text="{Binding NameEn}" />
+            <Entry Placeholder="{svc:Translate Key=submit.barcode}" Text="{Binding Barcode}" Keyboard="Numeric" />
+            <Entry Placeholder="{svc:Translate Key=submit.unit}" Text="{Binding UnitSize}" />
+
+            <Label Text="{svc:Translate Key=submit.tax}" FontSize="12" TextColor="{StaticResource Gray500}" />
+            <Picker ItemsSource="{Binding TaxClasses}" SelectedItem="{Binding SelectedTaxClass}" />
+
+            <Button Text="{svc:Translate Key=submit.send}" Command="{Binding SubmitCommand}"
+                    IsEnabled="{Binding IsNotBusy}"
+                    BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="22" HeightRequest="48" FontAttributes="Bold" />
+
+            <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Primary}" FontAttributes="Bold"
+                   IsVisible="{Binding StatusMessage, Converter={StaticResource NotNull}}" />
+            <Label Text="{Binding ErrorMessage}" TextColor="Red"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource NotNull}}" />
+
+            <BoxView HeightRequest="1" Color="{StaticResource Gray100}" Margin="0,6" />
+
+            <Label Text="{svc:Translate Key=submit.mine}" FontAttributes="Bold" />
+            <CollectionView ItemsSource="{Binding MySubmissions}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="m:SubmissionDto">
+                        <Grid ColumnDefinitions="*,Auto" Padding="0,6">
+                            <Label Grid.Column="0" Text="{Binding NameAr}" FontSize="14" />
+                            <Label Grid.Column="1" Text="{Binding Status, Converter={StaticResource SubmStatus}}" FontSize="12" TextColor="{StaticResource Gray500}" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

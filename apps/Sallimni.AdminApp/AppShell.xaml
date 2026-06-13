@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="Sallimni.AdminApp.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:Sallimni.AdminApp.Views"
+    xmlns:svc="clr-namespace:Sallimni.AdminApp.Services"
+    FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
+    Title="سلّمني إدارة">
+
+    <TabBar>
+        <ShellContent Title="{svc:Translate Key=tab.approvals}"
+                      ContentTemplate="{DataTemplate views:ApprovalsPage}" Route="approvals" />
+        <ShellContent Title="{svc:Translate Key=tab.tasks}"
+                      ContentTemplate="{DataTemplate views:TasksPage}" Route="tasks" />
+        <ShellContent Title="{svc:Translate Key=tab.settlements}"
+                      ContentTemplate="{DataTemplate views:SettlementsPage}" Route="settlements" />
+        <ShellContent Title="{svc:Translate Key=tab.settings}"
+                      ContentTemplate="{DataTemplate views:SettingsPage}" Route="settings" />
+    </TabBar>
+</Shell>
