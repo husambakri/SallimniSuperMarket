@@ -24,12 +24,8 @@ public static class MauiProgram
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
 			});
 
-		// عنوان الخادم: المحاكي (Android) يصل للمضيف عبر 10.0.2.2، وويندوز عبر localhost.
-#if ANDROID
-		var baseUrl = "http://10.0.2.2:5080/";
-#else
-		var baseUrl = "http://localhost:5080/";
-#endif
+		// الخادم السحابي على Railway (للتطوير المحلّي بدّله بـ http://localhost:5080/ أو 10.0.2.2 للمحاكي).
+		var baseUrl = "https://sallimnisupermarket-production.up.railway.app/";
 		builder.Services.AddSingleton(new AppConfig { BaseUrl = baseUrl });
 		builder.Services.AddHttpClient<ApiClient>(c =>
 		{
