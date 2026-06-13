@@ -106,6 +106,19 @@ public class CatalogController : ControllerBase
             p.Description, p.TaxClass, p.CategoryId, p.Category?.NameAr ?? "", min, max, savings);
     }
 
+    /// <summary>تقديم صورة الصنف المخزّنة في القاعدة (أو 404 لترجع التطبيقات للرمز التعبيري).</summary>
+    [HttpGet("products/{id:guid}/image")]
+    public async Task<IActionResult> GetProductImage(Guid id, CancellationToken ct)
+    {
+        var img = await _db.Products
+            .Where(p => p.Id == id && p.ImageData != null)
+            .Select(p => new { p.ImageData, p.ImageContentType })
+            .FirstOrDefaultAsync(ct);
+        if (img?.ImageData is null) return NotFound();
+        Response.Headers.CacheControl = "public,max-age=86400";
+        return File(img.ImageData, img.ImageContentType ?? "image/jpeg");
+    }
+
     /// <summary>فحص السعر بالباركود (Scan-to-Compare) — سعرنا + نسبة التوفير.</summary>
     [HttpGet("barcode/{code}")]
     public async Task<ActionResult<BarcodeLookupDto>> Lookup(string code, [FromQuery] Guid? customerId, CancellationToken ct)

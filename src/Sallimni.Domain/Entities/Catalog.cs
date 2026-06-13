@@ -28,8 +28,12 @@ public class Product : BaseEntity
     public string NameEn { get; set; } = string.Empty;
     public string? Barcode { get; set; }   // EAN-13/EAN-8/UPC-A/UPC-E — مفتاح فحص السعر
     public string? UnitSize { get; set; }  // الوحدة/الحجم
+    /// <summary>رابط الصورة العام (يشير إلى نقطة تقديم الصورة عند رفعها).</summary>
     public string? ImageUrl { get; set; }
-    /// <summary>رمز تعبيري بديل عن الصورة في الإصدار الأول (عرض دون إنترنت).</summary>
+    /// <summary>بيانات الصورة المخزّنة في القاعدة (bytea) — مكتفية ذاتياً دون خدمة تخزين خارجية.</summary>
+    public byte[]? ImageData { get; set; }
+    public string? ImageContentType { get; set; }
+    /// <summary>رمز تعبيري بديل عند غياب صورة حقيقية.</summary>
     public string? Emoji { get; set; }
     /// <summary>وصف الصنف (يظهر في صفحة التفاصيل).</summary>
     public string? Description { get; set; }

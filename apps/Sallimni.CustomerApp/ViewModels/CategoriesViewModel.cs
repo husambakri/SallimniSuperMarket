@@ -12,12 +12,14 @@ public partial class CategoriesViewModel : BaseViewModel
     private readonly ApiClient _api;
     private readonly AppState _state;
     private readonly CartService _cart;
+    private readonly AppConfig _config;
 
-    public CategoriesViewModel(ApiClient api, AppState state, CartService cart)
+    public CategoriesViewModel(ApiClient api, AppState state, CartService cart, AppConfig config)
     {
         _api = api;
         _state = state;
         _cart = cart;
+        _config = config;
     }
 
     public ObservableCollection<CategoryDto> Categories { get; } = new();
@@ -39,9 +41,14 @@ public partial class CategoriesViewModel : BaseViewModel
             Categories.Clear();
             foreach (var c in cats) Categories.Add(c);
 
+            var baseUrl = _config.BaseUrl.TrimEnd('/');
             var offers = await _api.GetOffersAsync(10);
             Offers.Clear();
-            foreach (var o in offers) Offers.Add(o);
+            foreach (var o in offers)
+            {
+                if (!string.IsNullOrEmpty(o.ImageUrl)) o.FullImageUrl = baseUrl + o.ImageUrl;
+                Offers.Add(o);
+            }
             OnPropertyChanged(nameof(HasOffers));
         }
         catch (Exception ex) { ErrorMessage = ex.Message; }

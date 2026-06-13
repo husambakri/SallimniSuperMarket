@@ -28,7 +28,7 @@ public class AdminController : ControllerBase
     [HttpGet("products")]
     public async Task<ActionResult<List<AdminProductDto>>> GetProducts(CancellationToken ct)
         => (await _admin.GetProductsAsync(ct)).Select(p => new AdminProductDto(
-            p.Id, p.NameAr, p.NameEn, p.Barcode, p.UnitSize, p.Emoji, p.TaxClass,
+            p.Id, p.NameAr, p.NameEn, p.Barcode, p.UnitSize, p.Emoji, p.ImageUrl, p.TaxClass,
             p.CategoryId, p.CategoryNameAr, p.MerchantCount, p.IsActive)).ToList();
 
     /// <summary>تأسيس بطاقة صنف رئيسية.</summary>
@@ -41,6 +41,61 @@ public class AdminController : ControllerBase
                 req.Emoji, req.Description, req.CategoryId, req.TaxClass, ct);
             return Ok(new { p.Id });
         }
+        catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
+    /// <summary>تعديل بطاقة صنف.</summary>
+    [HttpPut("products/{id:guid}")]
+    public async Task<IActionResult> UpdateProduct(Guid id, [FromBody] UpdateProductRequest req, CancellationToken ct)
+    {
+        try
+        {
+            await _admin.UpdateProductAsync(id, req.NameAr, req.NameEn, req.Barcode, req.UnitSize,
+                req.Emoji, req.Description, req.CategoryId, req.TaxClass, ct);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
+    /// <summary>حذف صنف (إيقاف تفعيل).</summary>
+    [HttpDelete("products/{id:guid}")]
+    public async Task<IActionResult> DeleteProduct(Guid id, CancellationToken ct)
+    {
+        try { await _admin.DeleteProductAsync(id, ct); return NoContent(); }
+        catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
+    /// <summary>رفع صورة صنف (multipart).</summary>
+    [HttpPost("products/{id:guid}/image")]
+    [RequestSizeLimit(5_000_000)]
+    public async Task<IActionResult> UploadImage(Guid id, IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0) return BadRequest(new { error = "لا ملف." });
+        if (file.Length > 5_000_000) return BadRequest(new { error = "حجم الصورة يتجاوز 5MB." });
+        if (!file.ContentType.StartsWith("image/")) return BadRequest(new { error = "الملف ليس صورة." });
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        try
+        {
+            await _admin.SetProductImageAsync(id, ms.ToArray(), file.ContentType, ct);
+            return Ok(new { imageUrl = $"/api/catalog/products/{id}/image" });
+        }
+        catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
+    /// <summary>تعديل تصنيف.</summary>
+    [HttpPut("categories/{id:guid}")]
+    public async Task<IActionResult> UpdateCategory(Guid id, [FromBody] UpdateCategoryRequest req, CancellationToken ct)
+    {
+        try { await _admin.UpdateCategoryAsync(id, req.NameAr, req.NameEn, req.Icon, ct); return NoContent(); }
+        catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
+    /// <summary>حذف تصنيف (ممنوع إن كان فيه أصناف فعّالة).</summary>
+    [HttpDelete("categories/{id:guid}")]
+    public async Task<IActionResult> DeleteCategory(Guid id, CancellationToken ct)
+    {
+        try { await _admin.DeleteCategoryAsync(id, ct); return NoContent(); }
         catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
     }
 

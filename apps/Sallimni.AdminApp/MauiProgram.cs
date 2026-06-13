@@ -26,6 +26,7 @@ public static class MauiProgram
 		// الخادم السحابي على Railway (للتطوير المحلّي بدّله بـ http://localhost:5080/ أو 10.0.2.2 للمحاكي).
 		var baseUrl = "https://sallimnisupermarket-production.up.railway.app/";
 		builder.Services.AddSingleton(new AppConfig { BaseUrl = baseUrl });
+		builder.Services.AddSingleton<CatalogState>();
 		builder.Services.AddHttpClient<ApiClient>(c =>
 		{
 			c.BaseAddress = new Uri(baseUrl);
@@ -33,12 +34,14 @@ public static class MauiProgram
 		});
 
 		builder.Services.AddTransient<CatalogViewModel>();
+		builder.Services.AddTransient<ProductEditViewModel>();
 		builder.Services.AddTransient<ApprovalsViewModel>();
 		builder.Services.AddTransient<TasksViewModel>();
 		builder.Services.AddTransient<SettlementsViewModel>();
 		builder.Services.AddTransient<SettingsViewModel>();
 
 		builder.Services.AddTransient<CatalogPage>();
+		builder.Services.AddTransient<ProductEditPage>();
 		builder.Services.AddTransient<ApprovalsPage>();
 		builder.Services.AddTransient<TasksPage>();
 		builder.Services.AddTransient<SettlementsPage>();

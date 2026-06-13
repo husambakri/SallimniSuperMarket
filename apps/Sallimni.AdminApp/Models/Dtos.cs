@@ -16,12 +16,17 @@ public class AdminProductDto
     public string? Barcode { get; set; }
     public string? UnitSize { get; set; }
     public string? Emoji { get; set; }
+    public string? ImageUrl { get; set; }
     public int TaxClass { get; set; }
     public Guid CategoryId { get; set; }
     public string CategoryNameAr { get; set; } = "";
     public int MerchantCount { get; set; }
     public bool IsActive { get; set; }
     public string Glyph => string.IsNullOrEmpty(Emoji) ? "🛒" : Emoji!;
+
+    /// <summary>الرابط المطلق للصورة (يُحقن من قاعدة عنوان الخادم)؛ فارغ إن لا صورة.</summary>
+    public string? FullImageUrl { get; set; }
+    public bool HasImage => !string.IsNullOrEmpty(FullImageUrl);
 }
 
 public class CreateProductRequest

@@ -63,16 +63,44 @@
 
             <BoxView HeightRequest="1" Color="{StaticResource Gray100}" />
 
-            <!-- قائمة الأصناف الموجودة -->
-            <Label Text="الأصناف الحالية" FontAttributes="Bold" FontSize="16" />
+            <!-- إدارة التصنيفات -->
+            <Label Text="التصنيفات" FontAttributes="Bold" FontSize="16" />
+            <FlexLayout BindableLayout.ItemsSource="{Binding Categories}" Wrap="Wrap" JustifyContent="Start">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="m:CategoryDto">
+                        <Border Margin="0,0,8,8" Padding="10,5" StrokeShape="RoundRectangle 16" StrokeThickness="1" Stroke="{StaticResource Gray200}">
+                            <HorizontalStackLayout Spacing="6">
+                                <Label Text="{Binding NameAr}" FontSize="13" VerticalOptions="Center" />
+                                <Label Text="✕" FontSize="13" TextColor="#D32F2F" VerticalOptions="Center">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CatalogViewModel}}, Path=DeleteCategoryCommand}" CommandParameter="{Binding .}" />
+                                    </Label.GestureRecognizers>
+                                </Label>
+                            </HorizontalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </FlexLayout>
+
+            <BoxView HeightRequest="1" Color="{StaticResource Gray100}" />
+
+            <!-- قائمة الأصناف الموجودة (اضغط لتعديل) -->
+            <Label Text="الأصناف الحالية — اضغط على صنف لتعديله أو حذفه" FontAttributes="Bold" FontSize="16" />
             <Label Text="لا أصناف بعد — أضِف أول صنف من الأعلى." FontSize="13" TextColor="{StaticResource Gray400}"
                    IsVisible="{Binding HasProducts, Converter={StaticResource Invert}}" />
             <VerticalStackLayout BindableLayout.ItemsSource="{Binding Products}" Spacing="6">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="m:AdminProductDto">
                         <Border Padding="12" StrokeShape="RoundRectangle 12" StrokeThickness="1" Stroke="{StaticResource Gray200}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CatalogViewModel}}, Path=OpenProductCommand}" CommandParameter="{Binding .}" />
+                            </Border.GestureRecognizers>
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                <Label Grid.Column="0" Text="{Binding Glyph}" FontSize="28" VerticalOptions="Center" />
+                                <!-- صورة حقيقية أو رمز بديل -->
+                                <Grid Grid.Column="0" WidthRequest="44" HeightRequest="44" VerticalOptions="Center">
+                                    <Image Source="{Binding FullImageUrl}" Aspect="AspectFill" IsVisible="{Binding HasImage}" />
+                                    <Label Text="{Binding Glyph}" FontSize="28" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding HasImage, Converter={StaticResource Invert}}" />
+                                </Grid>
                                 <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
                                     <Label Text="{Binding NameAr}" FontAttributes="Bold" FontSize="15" />
                                     <Label FontSize="11" TextColor="{StaticResource Gray500}">
@@ -82,13 +110,7 @@
                                         </FormattedString></Label.FormattedText>
                                     </Label>
                                 </VerticalStackLayout>
-                                <Border Grid.Column="2" BackgroundColor="{StaticResource Secondary}" Padding="8,3" StrokeShape="RoundRectangle 10" StrokeThickness="0" VerticalOptions="Center">
-                                    <Label FontSize="11" TextColor="{StaticResource PrimaryDark}">
-                                        <Label.FormattedText><FormattedString>
-                                            <Span Text="{Binding MerchantCount}" /><Span Text=" تاجر" />
-                                        </FormattedString></Label.FormattedText>
-                                    </Label>
-                                </Border>
+                                <Label Grid.Column="2" Text="✏" FontSize="18" TextColor="{StaticResource Primary}" VerticalOptions="Center" />
                             </Grid>
                         </Border>
                     </DataTemplate>

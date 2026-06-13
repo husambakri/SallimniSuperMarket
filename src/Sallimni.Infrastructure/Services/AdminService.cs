@@ -19,7 +19,7 @@ public record SettlementRow(Guid SubOrderId, Guid MerchantId, string MerchantNam
     SubOrderStatus Status, decimal SubtotalInclTax, decimal CommissionAmount, decimal MerchantPayout);
 
 public record AdminProductRow(Guid Id, string NameAr, string NameEn, string? Barcode, string? UnitSize,
-    string? Emoji, int TaxClass, Guid CategoryId, string CategoryNameAr, int MerchantCount, bool IsActive);
+    string? Emoji, string? ImageUrl, int TaxClass, Guid CategoryId, string CategoryNameAr, int MerchantCount, bool IsActive);
 
 /// <summary>
 /// خدمات الإدارة (قسم 2): تأسيس الأصناف واعتماد طلبات التجار، إنشاء مهام التوصيل،
@@ -73,15 +73,76 @@ public class AdminService
         return p;
     }
 
-    /// <summary>قائمة الأصناف للإدارة (مع اسم التصنيف وعدد التجار الذين يبيعونها).</summary>
+    /// <summary>قائمة الأصناف للإدارة (مع اسم التصنيف وعدد التجار) — لا تُحمَّل بايتات الصورة.</summary>
     public async Task<List<AdminProductRow>> GetProductsAsync(CancellationToken ct = default)
         => await _db.Products
             .OrderByDescending(p => p.CreatedAt)
             .Select(p => new AdminProductRow(
-                p.Id, p.NameAr, p.NameEn, p.Barcode, p.UnitSize, p.Emoji,
+                p.Id, p.NameAr, p.NameEn, p.Barcode, p.UnitSize, p.Emoji, p.ImageUrl,
                 (int)p.TaxClass, p.CategoryId, p.Category!.NameAr,
                 p.MerchantProducts.Count(mp => mp.IsAvailable), p.IsActive))
             .ToListAsync(ct);
+
+    /// <summary>تعديل بطاقة صنف.</summary>
+    public async Task UpdateProductAsync(Guid id, string nameAr, string nameEn, string? barcode,
+        string? unitSize, string? emoji, string? description, Guid categoryId, TaxClass taxClass, CancellationToken ct = default)
+    {
+        var p = await _db.Products.FirstOrDefaultAsync(x => x.Id == id, ct)
+            ?? throw new InvalidOperationException("الصنف غير موجود.");
+        if (string.IsNullOrWhiteSpace(nameAr)) throw new InvalidOperationException("الاسم بالعربية مطلوب.");
+        if (!await _db.Categories.AnyAsync(c => c.Id == categoryId, ct)) throw new InvalidOperationException("التصنيف غير موجود.");
+        p.NameAr = nameAr; p.NameEn = nameEn; p.Barcode = barcode; p.UnitSize = unitSize;
+        if (!string.IsNullOrWhiteSpace(emoji)) p.Emoji = emoji;
+        p.Description = description; p.CategoryId = categoryId; p.TaxClass = taxClass;
+        p.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>حذف صنف (إيقاف تفعيل آمن — الطلبات السابقة تشير إليه).</summary>
+    public async Task DeleteProductAsync(Guid id, CancellationToken ct = default)
+    {
+        var p = await _db.Products.FirstOrDefaultAsync(x => x.Id == id, ct)
+            ?? throw new InvalidOperationException("الصنف غير موجود.");
+        p.IsActive = false;
+        p.UpdatedAt = DateTimeOffset.UtcNow;
+        // إخفاء عروض التجار لهذا الصنف عن البيع.
+        var offers = await _db.MerchantProducts.Where(mp => mp.ProductId == id).ToListAsync(ct);
+        foreach (var o in offers) o.IsAvailable = false;
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>رفع/تحديث صورة صنف (تُخزَّن في القاعدة) وضبط رابطها العام.</summary>
+    public async Task SetProductImageAsync(Guid id, byte[] data, string contentType, CancellationToken ct = default)
+    {
+        var p = await _db.Products.FirstOrDefaultAsync(x => x.Id == id, ct)
+            ?? throw new InvalidOperationException("الصنف غير موجود.");
+        p.ImageData = data;
+        p.ImageContentType = contentType;
+        p.ImageUrl = $"/api/catalog/products/{id}/image";
+        p.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task UpdateCategoryAsync(Guid id, string nameAr, string nameEn, string? icon, CancellationToken ct = default)
+    {
+        var c = await _db.Categories.FirstOrDefaultAsync(x => x.Id == id, ct)
+            ?? throw new InvalidOperationException("التصنيف غير موجود.");
+        if (string.IsNullOrWhiteSpace(nameAr)) throw new InvalidOperationException("الاسم بالعربية مطلوب.");
+        c.NameAr = nameAr; c.NameEn = nameEn;
+        if (!string.IsNullOrWhiteSpace(icon)) c.Icon = icon;
+        c.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task DeleteCategoryAsync(Guid id, CancellationToken ct = default)
+    {
+        var c = await _db.Categories.FirstOrDefaultAsync(x => x.Id == id, ct)
+            ?? throw new InvalidOperationException("التصنيف غير موجود.");
+        if (await _db.Products.AnyAsync(p => p.CategoryId == id && p.IsActive, ct))
+            throw new InvalidOperationException("لا يمكن حذف تصنيف يحتوي أصنافاً فعّالة.");
+        _db.Categories.Remove(c);
+        await _db.SaveChangesAsync(ct);
+    }
 
     public async Task<List<ProductSubmission>> GetPendingSubmissionsAsync(CancellationToken ct = default)
         => await _db.ProductSubmissions

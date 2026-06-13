@@ -11,11 +11,13 @@ public partial class ProductsViewModel : BaseViewModel, IQueryAttributable
 {
     private readonly ApiClient _api;
     private readonly CartService _cart;
+    private readonly AppConfig _config;
 
-    public ProductsViewModel(ApiClient api, CartService cart)
+    public ProductsViewModel(ApiClient api, CartService cart, AppConfig config)
     {
         _api = api;
         _cart = cart;
+        _config = config;
     }
 
     public ObservableCollection<ProductDto> Products { get; } = new();
@@ -45,9 +47,14 @@ public partial class ProductsViewModel : BaseViewModel, IQueryAttributable
         IsBusy = true; ErrorMessage = null;
         try
         {
+            var baseUrl = _config.BaseUrl.TrimEnd('/');
             var products = await _api.GetProductsAsync(_categoryId, _query);
             Products.Clear();
-            foreach (var p in products) Products.Add(p);
+            foreach (var p in products)
+            {
+                if (!string.IsNullOrEmpty(p.ImageUrl)) p.FullImageUrl = baseUrl + p.ImageUrl;
+                Products.Add(p);
+            }
         }
         catch (Exception ex) { ErrorMessage = ex.Message; }
         finally { IsBusy = false; }

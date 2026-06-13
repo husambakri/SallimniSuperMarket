@@ -32,6 +32,10 @@ public class ProductDto
     public bool HasSavings => SavingsPercent > 0;
     public string SavingsText => $"وفّر {SavingsPercent}%";
     public string Glyph => string.IsNullOrEmpty(Emoji) ? "🛒" : Emoji!;
+
+    /// <summary>الرابط المطلق للصورة (يُحقن من قاعدة عنوان الخادم)؛ فارغ إن لا صورة.</summary>
+    public string? FullImageUrl { get; set; }
+    public bool HasImage => !string.IsNullOrEmpty(FullImageUrl);
 }
 
 public class ProductDetailDto
@@ -50,6 +54,10 @@ public class ProductDetailDto
     public decimal? CheapestPriceInclTax { get; set; }
     public decimal? RegularPriceInclTax { get; set; }
     public int SavingsPercent { get; set; }
+
+    public string Glyph => string.IsNullOrEmpty(Emoji) ? "🛒" : Emoji!;
+    public string? FullImageUrl { get; set; }
+    public bool HasImage => !string.IsNullOrEmpty(FullImageUrl);
 }
 
 public class BarcodeLookupDto

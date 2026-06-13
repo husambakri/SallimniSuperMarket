@@ -69,7 +69,8 @@
                                         </Border.GestureRecognizers>
                                         <VerticalStackLayout Spacing="3">
                                             <Grid HeightRequest="60">
-                                                <Label Text="{Binding Glyph}" FontSize="40" HorizontalOptions="Center" VerticalOptions="Center" />
+                                                <Image Source="{Binding FullImageUrl}" Aspect="AspectFit" IsVisible="{Binding HasImage}" />
+                                                <Label Text="{Binding Glyph}" FontSize="40" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding HasImage, Converter={StaticResource Invert}}" />
                                                 <Border BackgroundColor="#FFF3C4" Padding="5,1" StrokeShape="RoundRectangle 7" StrokeThickness="0" HorizontalOptions="Start" VerticalOptions="Start">
                                                     <Label Text="{Binding SavingsText}" FontSize="9" FontAttributes="Bold" TextColor="#9A6700" />
                                                 </Border>

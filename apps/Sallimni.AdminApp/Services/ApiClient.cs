@@ -29,6 +29,27 @@ public class ApiClient
     public async Task CreateCategoryAsync(CreateCategoryRequest req, CancellationToken ct = default)
         => await EnsureOk(await _http.PostAsJsonAsync("api/admin/categories", req, JsonOpts, ct), ct);
 
+    public async Task UpdateProductAsync(Guid id, CreateProductRequest req, CancellationToken ct = default)
+        => await EnsureOk(await _http.PutAsJsonAsync($"api/admin/products/{id}", req, JsonOpts, ct), ct);
+
+    public async Task DeleteProductAsync(Guid id, CancellationToken ct = default)
+        => await EnsureOk(await _http.DeleteAsync($"api/admin/products/{id}", ct), ct);
+
+    public async Task UploadProductImageAsync(Guid id, Stream stream, string fileName, string contentType, CancellationToken ct = default)
+    {
+        using var content = new System.Net.Http.MultipartFormDataContent();
+        var fileContent = new StreamContent(stream);
+        fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+        content.Add(fileContent, "file", fileName);
+        await EnsureOk(await _http.PostAsync($"api/admin/products/{id}/image", content, ct), ct);
+    }
+
+    public async Task UpdateCategoryAsync(Guid id, CreateCategoryRequest req, CancellationToken ct = default)
+        => await EnsureOk(await _http.PutAsJsonAsync($"api/admin/categories/{id}", req, JsonOpts, ct), ct);
+
+    public async Task DeleteCategoryAsync(Guid id, CancellationToken ct = default)
+        => await EnsureOk(await _http.DeleteAsync($"api/admin/categories/{id}", ct), ct);
+
     public async Task ApproveSubmissionAsync(Guid id, Guid categoryId, CancellationToken ct = default)
         => await EnsureOk(await _http.PostAsJsonAsync($"api/admin/submissions/{id}/approve", new { CategoryId = categoryId }, JsonOpts, ct), ct);
 

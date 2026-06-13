@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Sallimni.AdminApp.ViewModels"
+             xmlns:svc="clr-namespace:Sallimni.AdminApp.Services"
+             x:Class="Sallimni.AdminApp.Views.ProductEditPage"
+             x:DataType="vm:ProductEditViewModel"
+             FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
+             Title="تعديل صنف">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="18" Spacing="12">
+
+            <!-- معاينة الصورة -->
+            <Border BackgroundColor="{StaticResource Gray100}" StrokeShape="RoundRectangle 16" StrokeThickness="0" HeightRequest="180">
+                <Grid>
+                    <Image Source="{Binding PreviewImageUrl}" Aspect="AspectFit" IsVisible="{Binding HasImage}" Margin="10" />
+                    <Label Text="{Binding Emoji}" FontSize="80" HorizontalOptions="Center" VerticalOptions="Center"
+                           IsVisible="{Binding HasImage, Converter={StaticResource Invert}}" />
+                </Grid>
+            </Border>
+            <Button Text="📷 اختيار/تغيير الصورة" Command="{Binding PickImageCommand}"
+                    BackgroundColor="{StaticResource Tertiary}" TextColor="White" CornerRadius="20" />
+
+            <Entry Placeholder="الاسم بالعربية *" Text="{Binding NameAr}" />
+            <Entry Placeholder="الاسم بالإنجليزية" Text="{Binding NameEn}" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <Entry Grid.Column="0" Placeholder="الباركود" Text="{Binding Barcode}" Keyboard="Numeric" />
+                <Entry Grid.Column="1" Placeholder="الوحدة/الحجم" Text="{Binding UnitSize}" />
+            </Grid>
+            <Entry Placeholder="رمز بديل 🛒" Text="{Binding Emoji}" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                    <Label Text="التصنيف" FontSize="11" TextColor="{StaticResource Gray500}" />
+                    <Picker ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" ItemDisplayBinding="{Binding NameAr}" />
+                </VerticalStackLayout>
+                <VerticalStackLayout Grid.Column="1" Spacing="2">
+                    <Label Text="فئة الضريبة" FontSize="11" TextColor="{StaticResource Gray500}" />
+                    <Picker ItemsSource="{Binding TaxOptions}" SelectedItem="{Binding SelectedTax}" />
+                </VerticalStackLayout>
+            </Grid>
+
+            <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Primary}" FontAttributes="Bold" IsVisible="{Binding StatusMessage, Converter={StaticResource NotNull}}" />
+            <Label Text="{Binding ErrorMessage}" TextColor="Red" IsVisible="{Binding ErrorMessage, Converter={StaticResource NotNull}}" />
+
+            <Button Text="حفظ التعديلات" Command="{Binding SaveCommand}" IsEnabled="{Binding IsNotBusy}"
+                    BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="22" HeightRequest="48" FontAttributes="Bold" />
+            <Button Text="حذف الصنف" Command="{Binding DeleteCommand}"
+                    BackgroundColor="#D32F2F" TextColor="White" CornerRadius="22" HeightRequest="46" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -18,7 +18,15 @@ public record TaxOption(int Value, string Label)
 public partial class CatalogViewModel : BaseViewModel
 {
     private readonly ApiClient _api;
-    public CatalogViewModel(ApiClient api) => _api = api;
+    private readonly AppConfig _config;
+    private readonly CatalogState _state;
+
+    public CatalogViewModel(ApiClient api, AppConfig config, CatalogState state)
+    {
+        _api = api;
+        _config = config;
+        _state = state;
+    }
 
     public ObservableCollection<CategoryDto> Categories { get; } = new();
     public ObservableCollection<AdminProductDto> Products { get; } = new();
@@ -56,12 +64,19 @@ public partial class CatalogViewModel : BaseViewModel
             var cats = await _api.GetCategoriesAsync();
             Categories.Clear();
             foreach (var c in cats) Categories.Add(c);
+            _state.Categories = cats;
             SelectedCategory ??= Categories.FirstOrDefault();
             SelectedTax ??= TaxOptions.Last(); // 16% افتراضي
 
+            var baseUrl = _config.BaseUrl.TrimEnd('/');
             var prods = await _api.GetProductsAsync();
             Products.Clear();
-            foreach (var p in prods) Products.Add(p);
+            foreach (var p in prods)
+            {
+                if (!string.IsNullOrEmpty(p.ImageUrl))
+                    p.FullImageUrl = baseUrl + p.ImageUrl; // ImageUrl نسبي (/api/...)
+                Products.Add(p);
+            }
         }
         catch (Exception ex) { ErrorMessage = ex.Message; }
         finally { IsBusy = false; OnPropertyChanged(nameof(HasProducts)); }
@@ -117,5 +132,27 @@ public partial class CatalogViewModel : BaseViewModel
         }
         catch (Exception ex) { ErrorMessage = ex.Message; }
         finally { IsBusy = false; }
+    }
+
+    /// <summary>فتح صفحة تعديل صنف.</summary>
+    [RelayCommand]
+    private async Task OpenProductAsync(AdminProductDto product)
+    {
+        if (product is null) return;
+        _state.SelectedProduct = product;
+        await Shell.Current.GoToAsync("productedit");
+    }
+
+    /// <summary>حذف تصنيف (بتأكيد).</summary>
+    [RelayCommand]
+    private async Task DeleteCategoryAsync(CategoryDto category)
+    {
+        if (category is null) return;
+        var page = Application.Current?.Windows.FirstOrDefault()?.Page;
+        if (page is null) return;
+        var ok = await page.DisplayAlertAsync("حذف التصنيف", $"حذف \"{category.NameAr}\"؟", "نعم", "لا");
+        if (!ok) return;
+        try { await _api.DeleteCategoryAsync(category.Id); await LoadAsync(); }
+        catch (Exception ex) { await page.DisplayAlertAsync("خطأ", ex.Message, "حسناً"); }
     }
 }
