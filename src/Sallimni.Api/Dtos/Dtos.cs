@@ -3,7 +3,7 @@ using Sallimni.Domain.Enums;
 namespace Sallimni.Api.Dtos;
 
 // ===== الكتالوج =====
-public record CatalogCategoryDto(Guid Id, string NameAr, string NameEn, string? Icon, int ProductCount);
+public record CatalogCategoryDto(Guid Id, string NameAr, string NameEn, string? Icon, string? ImageUrl, int ProductCount);
 
 public record ProductDto(Guid Id, string NameAr, string NameEn, string? Barcode,
     string? UnitSize, string? ImageUrl, string? Emoji, TaxClass TaxClass, Guid CategoryId,

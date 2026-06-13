@@ -37,9 +37,14 @@ public partial class CategoriesViewModel : BaseViewModel
         try
         {
             await EnsureCustomerAsync();
+            var baseUrlForCats = _config.BaseUrl.TrimEnd('/');
             var cats = await _api.GetCategoriesAsync();
             Categories.Clear();
-            foreach (var c in cats) Categories.Add(c);
+            foreach (var c in cats)
+            {
+                if (!string.IsNullOrEmpty(c.ImageUrl)) c.FullImageUrl = baseUrlForCats + c.ImageUrl;
+                Categories.Add(c);
+            }
 
             var baseUrl = _config.BaseUrl.TrimEnd('/');
             var offers = await _api.GetOffersAsync(10);
@@ -79,6 +84,13 @@ public partial class CategoriesViewModel : BaseViewModel
     {
         if (product is null) return;
         await Shell.Current.GoToAsync($"productdetail?id={product.Id}");
+    }
+
+    [RelayCommand]
+    private void AddToCart(ProductDto product)
+    {
+        if (product?.CheapestPriceInclTax is null) return;
+        _cart.Add(product);
     }
 
     [RelayCommand]

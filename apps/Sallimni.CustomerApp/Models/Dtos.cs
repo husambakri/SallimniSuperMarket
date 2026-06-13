@@ -10,7 +10,12 @@ public class CategoryDto
     public string NameAr { get; set; } = "";
     public string NameEn { get; set; } = "";
     public string? Icon { get; set; }
+    public string? ImageUrl { get; set; }
     public int ProductCount { get; set; }
+
+    public string Glyph => string.IsNullOrEmpty(Icon) ? "🛒" : Icon!;
+    public string? FullImageUrl { get; set; }
+    public bool HasImage => !string.IsNullOrEmpty(FullImageUrl);
 }
 
 public class ProductDto

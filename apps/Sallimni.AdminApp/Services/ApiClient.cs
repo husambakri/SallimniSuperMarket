@@ -23,11 +23,32 @@ public class ApiClient
     public async Task<List<AdminProductDto>> GetProductsAsync(CancellationToken ct = default)
         => await _http.GetFromJsonAsync<List<AdminProductDto>>("api/admin/products", JsonOpts, ct) ?? new();
 
-    public async Task CreateProductAsync(CreateProductRequest req, CancellationToken ct = default)
-        => await EnsureOk(await _http.PostAsJsonAsync("api/admin/products", req, JsonOpts, ct), ct);
+    public async Task<Guid> CreateProductAsync(CreateProductRequest req, CancellationToken ct = default)
+    {
+        var resp = await _http.PostAsJsonAsync("api/admin/products", req, JsonOpts, ct);
+        await EnsureOk(resp, ct);
+        var body = await resp.Content.ReadFromJsonAsync<IdResponse>(JsonOpts, ct);
+        return body?.Id ?? Guid.Empty;
+    }
 
-    public async Task CreateCategoryAsync(CreateCategoryRequest req, CancellationToken ct = default)
-        => await EnsureOk(await _http.PostAsJsonAsync("api/admin/categories", req, JsonOpts, ct), ct);
+    public async Task<Guid> CreateCategoryAsync(CreateCategoryRequest req, CancellationToken ct = default)
+    {
+        var resp = await _http.PostAsJsonAsync("api/admin/categories", req, JsonOpts, ct);
+        await EnsureOk(resp, ct);
+        var body = await resp.Content.ReadFromJsonAsync<IdResponse>(JsonOpts, ct);
+        return body?.Id ?? Guid.Empty;
+    }
+
+    public async Task UploadCategoryImageAsync(Guid id, Stream stream, string fileName, string contentType, CancellationToken ct = default)
+    {
+        using var content = new System.Net.Http.MultipartFormDataContent();
+        var fileContent = new StreamContent(stream);
+        fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+        content.Add(fileContent, "file", fileName);
+        await EnsureOk(await _http.PostAsync($"api/admin/categories/{id}/image", content, ct), ct);
+    }
+
+    private record IdResponse(Guid Id);
 
     public async Task UpdateProductAsync(Guid id, CreateProductRequest req, CancellationToken ct = default)
         => await EnsureOk(await _http.PutAsJsonAsync($"api/admin/products/{id}", req, JsonOpts, ct), ct);

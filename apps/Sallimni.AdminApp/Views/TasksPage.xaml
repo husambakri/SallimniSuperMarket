@@ -19,6 +19,14 @@
             <Label Text="{Binding ErrorMessage}" TextColor="Red" FontSize="12"
                    IsVisible="{Binding ErrorMessage, Converter={StaticResource NotNull}}" />
 
+            <!-- حالة فارغة -->
+            <VerticalStackLayout IsVisible="{Binding IsEmpty}" Spacing="6" Padding="20" HorizontalOptions="Center">
+                <Label Text="🌊" FontSize="40" HorizontalOptions="Center" />
+                <Label Text="لا موجات حالياً" FontAttributes="Bold" HorizontalTextAlignment="Center" TextColor="{StaticResource Gray600}" />
+                <Label Text="تتكوّن الموجة تلقائياً عندما يؤكّد زبون طلباً من تطبيق الزبون، ثم تظهر هنا لتنشئ منها مهام التجميع والتوزيع."
+                       HorizontalTextAlignment="Center" FontSize="12" TextColor="{StaticResource Gray400}" />
+            </VerticalStackLayout>
+
             <!-- الموجات -->
             <VerticalStackLayout BindableLayout.ItemsSource="{Binding Waves}" Spacing="8">
                 <BindableLayout.ItemTemplate>

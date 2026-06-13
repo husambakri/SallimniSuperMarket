@@ -16,6 +16,14 @@
 
         <RefreshView Grid.Row="1" IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
             <CollectionView ItemsSource="{Binding Rows}" Margin="10">
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="6" Padding="30">
+                        <Label Text="💰" FontSize="40" HorizontalOptions="Center" />
+                        <Label Text="لا تسويات بعد" FontAttributes="Bold" HorizontalTextAlignment="Center" TextColor="{StaticResource Gray600}" />
+                        <Label Text="تظهر هنا مستحقّات كل تاجر (الإجمالي − العمولة) لكل طلب فرعي، وتقوم بتسويتها ودفعها. تتكوّن عند تأكيد الزبائن لطلباتهم."
+                               HorizontalTextAlignment="Center" FontSize="12" TextColor="{StaticResource Gray400}" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="m:SettlementRowDto">
                         <Border Margin="0,5" Padding="14" StrokeShape="RoundRectangle 14" StrokeThickness="1" Stroke="{StaticResource Gray200}">

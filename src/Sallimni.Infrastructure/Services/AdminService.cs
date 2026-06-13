@@ -123,6 +123,18 @@ public class AdminService
         await _db.SaveChangesAsync(ct);
     }
 
+    /// <summary>رفع/تحديث صورة تصنيف (تُخزَّن في القاعدة) وضبط رابطها العام.</summary>
+    public async Task SetCategoryImageAsync(Guid id, byte[] data, string contentType, CancellationToken ct = default)
+    {
+        var c = await _db.Categories.FirstOrDefaultAsync(x => x.Id == id, ct)
+            ?? throw new InvalidOperationException("التصنيف غير موجود.");
+        c.ImageData = data;
+        c.ImageContentType = contentType;
+        c.ImageUrl = $"/api/catalog/categories/{id}/image";
+        c.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+    }
+
     public async Task UpdateCategoryAsync(Guid id, string nameAr, string nameEn, string? icon, CancellationToken ct = default)
     {
         var c = await _db.Categories.FirstOrDefaultAsync(x => x.Id == id, ct)

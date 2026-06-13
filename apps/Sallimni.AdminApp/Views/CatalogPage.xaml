@@ -39,6 +39,12 @@
                             <Picker ItemsSource="{Binding TaxOptions}" SelectedItem="{Binding SelectedTax}" />
                         </VerticalStackLayout>
                     </Grid>
+                    <!-- صورة الصنف -->
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <Button Grid.Column="0" Text="📷 صورة" Command="{Binding PickProductImageCommand}"
+                                BackgroundColor="{StaticResource Secondary}" TextColor="{StaticResource PrimaryDark}" CornerRadius="16" Padding="16,6" />
+                        <Label Grid.Column="1" Text="{Binding ProductImageName}" FontSize="11" TextColor="{StaticResource Gray500}" VerticalOptions="Center" LineBreakMode="TailTruncation" />
+                    </Grid>
                     <Button Text="أضف الصنف" Command="{Binding AddProductCommand}" IsEnabled="{Binding IsNotBusy}"
                             BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="20" HeightRequest="46" FontAttributes="Bold" />
                 </VerticalStackLayout>
@@ -53,8 +59,13 @@
                         <Entry Grid.Column="1" Placeholder="بالعربية *" Text="{Binding CatNameAr}" />
                         <Entry Grid.Column="2" Placeholder="بالإنجليزية" Text="{Binding CatNameEn}" />
                     </Grid>
-                    <Button Text="أضف التصنيف" Command="{Binding AddCategoryCommand}" IsEnabled="{Binding IsNotBusy}"
-                            BackgroundColor="{StaticResource Tertiary}" TextColor="White" CornerRadius="18" Padding="20,6" HorizontalOptions="Start" />
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                        <Button Grid.Column="0" Text="📷 صورة" Command="{Binding PickCategoryImageCommand}"
+                                BackgroundColor="{StaticResource Secondary}" TextColor="{StaticResource PrimaryDark}" CornerRadius="16" Padding="14,6" FontSize="13" />
+                        <Label Grid.Column="1" Text="{Binding CategoryImageName}" FontSize="11" TextColor="{StaticResource Gray500}" VerticalOptions="Center" LineBreakMode="TailTruncation" />
+                        <Button Grid.Column="2" Text="أضف التصنيف" Command="{Binding AddCategoryCommand}" IsEnabled="{Binding IsNotBusy}"
+                                BackgroundColor="{StaticResource Tertiary}" TextColor="White" CornerRadius="18" Padding="16,6" FontSize="13" />
+                    </Grid>
                 </VerticalStackLayout>
             </Border>
 

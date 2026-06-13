@@ -55,7 +55,7 @@ public partial class ProductDetailViewModel : BaseViewModel, IQueryAttributable
     }
 
     [RelayCommand]
-    private async Task AddToCartAsync()
+    private void AddToCart()
     {
         if (Product?.CheapestPriceInclTax is null) return;
         _cart.Add(new ProductDto
@@ -70,8 +70,6 @@ public partial class ProductDetailViewModel : BaseViewModel, IQueryAttributable
             RegularPriceInclTax = Product.RegularPriceInclTax,
             SavingsPercent = Product.SavingsPercent
         });
-        var page = Application.Current?.Windows.FirstOrDefault()?.Page;
-        if (page is not null)
-            await page.DisplayAlertAsync(LocalizationManager.Instance["app.title"], "تمت الإضافة للسلة", LocalizationManager.Instance["common.ok"]);
+        // التغذية الراجعة البصرية تتمّ في الواجهة (نبضة الزرّ) بدل نافذة منبثقة.
     }
 }

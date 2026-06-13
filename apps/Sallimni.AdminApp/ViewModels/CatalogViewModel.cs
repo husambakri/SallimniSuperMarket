@@ -52,7 +52,54 @@ public partial class CatalogViewModel : BaseViewModel
     [ObservableProperty] private string _catNameEn = "";
     [ObservableProperty] private string _catIcon = "";
 
+    // صور مختارة بانتظار الإنشاء (تُرفع بعد الحصول على المعرّف)
+    private (byte[] Bytes, string Name, string Type)? _pendingProductImage;
+    private (byte[] Bytes, string Name, string Type)? _pendingCategoryImage;
+    [ObservableProperty] private string? _productImageName;
+    [ObservableProperty] private string? _categoryImageName;
+
     public bool HasProducts => Products.Count > 0;
+
+    private static async Task<(byte[] Bytes, string Name, string Type)?> PickImageAsync()
+    {
+        var file = await FilePicker.Default.PickAsync(new PickOptions
+        {
+            PickerTitle = "اختر صورة",
+            FileTypes = FilePickerFileType.Images
+        });
+        if (file is null) return null;
+        await using var s = await file.OpenReadAsync();
+        using var ms = new MemoryStream();
+        await s.CopyToAsync(ms);
+        var type = string.IsNullOrEmpty(file.ContentType) ? "image/jpeg" : file.ContentType;
+        return (ms.ToArray(), file.FileName, type);
+    }
+
+    [RelayCommand]
+    private async Task PickProductImageAsync()
+    {
+        try
+        {
+            var img = await PickImageAsync();
+            if (img is null) return;
+            _pendingProductImage = img;
+            ProductImageName = img.Value.Name;
+        }
+        catch (Exception ex) { ErrorMessage = ex.Message; }
+    }
+
+    [RelayCommand]
+    private async Task PickCategoryImageAsync()
+    {
+        try
+        {
+            var img = await PickImageAsync();
+            if (img is null) return;
+            _pendingCategoryImage = img;
+            CategoryImageName = img.Value.Name;
+        }
+        catch (Exception ex) { ErrorMessage = ex.Message; }
+    }
 
     [RelayCommand]
     private async Task LoadAsync()
@@ -92,7 +139,7 @@ public partial class CatalogViewModel : BaseViewModel
         IsBusy = true;
         try
         {
-            await _api.CreateProductAsync(new CreateProductRequest
+            var newId = await _api.CreateProductAsync(new CreateProductRequest
             {
                 NameAr = NameAr.Trim(),
                 NameEn = NameEn.Trim(),
@@ -103,8 +150,15 @@ public partial class CatalogViewModel : BaseViewModel
                 CategoryId = SelectedCategory.Id,
                 TaxClass = SelectedTax?.Value ?? 16
             });
+            // رفع الصورة المختارة (إن وُجدت) بعد إنشاء الصنف.
+            if (_pendingProductImage is { } img && newId != Guid.Empty)
+            {
+                using var ms = new MemoryStream(img.Bytes);
+                await _api.UploadProductImageAsync(newId, ms, img.Name, img.Type);
+            }
             StatusMessage = "تمت إضافة الصنف ✔";
             NameAr = NameEn = Barcode = UnitSize = Emoji = Description = "";
+            _pendingProductImage = null; ProductImageName = null;
             await LoadAsync();
         }
         catch (Exception ex) { ErrorMessage = ex.Message; }
@@ -120,14 +174,20 @@ public partial class CatalogViewModel : BaseViewModel
         IsBusy = true;
         try
         {
-            await _api.CreateCategoryAsync(new CreateCategoryRequest
+            var newCatId = await _api.CreateCategoryAsync(new CreateCategoryRequest
             {
                 NameAr = CatNameAr.Trim(),
                 NameEn = CatNameEn.Trim(),
                 Icon = string.IsNullOrWhiteSpace(CatIcon) ? null : CatIcon.Trim()
             });
+            if (_pendingCategoryImage is { } img && newCatId != Guid.Empty)
+            {
+                using var ms = new MemoryStream(img.Bytes);
+                await _api.UploadCategoryImageAsync(newCatId, ms, img.Name, img.Type);
+            }
             StatusMessage = "تمت إضافة التصنيف ✔";
             CatNameAr = CatNameEn = CatIcon = "";
+            _pendingCategoryImage = null; CategoryImageName = null;
             await LoadAsync();
         }
         catch (Exception ex) { ErrorMessage = ex.Message; }

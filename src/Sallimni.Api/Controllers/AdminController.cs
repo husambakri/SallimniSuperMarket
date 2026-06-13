@@ -83,6 +83,24 @@ public class AdminController : ControllerBase
         catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
     }
 
+    /// <summary>رفع صورة تصنيف (multipart).</summary>
+    [HttpPost("categories/{id:guid}/image")]
+    [RequestSizeLimit(5_000_000)]
+    public async Task<IActionResult> UploadCategoryImage(Guid id, IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0) return BadRequest(new { error = "لا ملف." });
+        if (file.Length > 5_000_000) return BadRequest(new { error = "حجم الصورة يتجاوز 5MB." });
+        if (!file.ContentType.StartsWith("image/")) return BadRequest(new { error = "الملف ليس صورة." });
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        try
+        {
+            await _admin.SetCategoryImageAsync(id, ms.ToArray(), file.ContentType, ct);
+            return Ok(new { imageUrl = $"/api/catalog/categories/{id}/image" });
+        }
+        catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
     /// <summary>تعديل تصنيف.</summary>
     [HttpPut("categories/{id:guid}")]
     public async Task<IActionResult> UpdateCategory(Guid id, [FromBody] UpdateCategoryRequest req, CancellationToken ct)

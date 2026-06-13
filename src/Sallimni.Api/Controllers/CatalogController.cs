@@ -24,8 +24,21 @@ public class CatalogController : ControllerBase
     public async Task<ActionResult<List<CatalogCategoryDto>>> GetCategories(CancellationToken ct)
         => await _db.Categories
             .OrderBy(c => c.SortOrder)
-            .Select(c => new CatalogCategoryDto(c.Id, c.NameAr, c.NameEn, c.Icon, c.Products.Count(p => p.IsActive)))
+            .Select(c => new CatalogCategoryDto(c.Id, c.NameAr, c.NameEn, c.Icon, c.ImageUrl, c.Products.Count(p => p.IsActive)))
             .ToListAsync(ct);
+
+    /// <summary>تقديم صورة التصنيف المخزّنة في القاعدة (أو 404).</summary>
+    [HttpGet("categories/{id:guid}/image")]
+    public async Task<IActionResult> GetCategoryImage(Guid id, CancellationToken ct)
+    {
+        var img = await _db.Categories
+            .Where(c => c.Id == id && c.ImageData != null)
+            .Select(c => new { c.ImageData, c.ImageContentType })
+            .FirstOrDefaultAsync(ct);
+        if (img?.ImageData is null) return NotFound();
+        Response.Headers.CacheControl = "public,max-age=86400";
+        return File(img.ImageData, img.ImageContentType ?? "image/jpeg");
+    }
 
     /// <summary>المنتجات (اختيارياً ضمن فئة أو ببحث نصّي) مع أرخص سعر، أعلى سعر، ونسبة التوفير.</summary>
     [HttpGet("products")]

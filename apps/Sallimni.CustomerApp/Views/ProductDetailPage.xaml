@@ -46,7 +46,8 @@
 
         <!-- زرّ الإضافة الثابت -->
         <Border Grid.Row="1" Padding="16" StrokeThickness="0" BackgroundColor="{StaticResource Gray100}">
-            <Button Text="{svc:Translate Key=detail.add}" Command="{Binding AddToCartCommand}"
+            <Button x:Name="AddButton" Text="{svc:Translate Key=detail.add}" Command="{Binding AddToCartCommand}"
+                    Clicked="OnAddTapped"
                     BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="24" HeightRequest="52" FontAttributes="Bold" FontSize="16" />
         </Border>
     </Grid>

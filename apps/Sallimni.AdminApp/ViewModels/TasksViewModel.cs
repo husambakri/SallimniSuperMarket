@@ -18,6 +18,8 @@ public partial class TasksViewModel : BaseViewModel
 
     [ObservableProperty] private DriverDto? _selectedDriver;
 
+    public bool IsEmpty => Waves.Count == 0 && !IsBusy;
+
     [RelayCommand]
     private async Task LoadAsync()
     {
@@ -39,7 +41,7 @@ public partial class TasksViewModel : BaseViewModel
             foreach (var t in tasks) Tasks.Add(t);
         }
         catch (Exception ex) { ErrorMessage = ex.Message; }
-        finally { IsBusy = false; }
+        finally { IsBusy = false; OnPropertyChanged(nameof(IsEmpty)); }
     }
 
     [RelayCommand]

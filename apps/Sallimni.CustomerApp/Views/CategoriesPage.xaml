@@ -76,10 +76,17 @@
                                                 </Border>
                                             </Grid>
                                             <Label Text="{Binding NameAr}" FontSize="12" FontAttributes="Bold" MaxLines="1" />
-                                            <HorizontalStackLayout Spacing="3">
-                                                <Label Text="{Binding CheapestPriceInclTax, Converter={StaticResource Price}}" FontSize="13" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
-                                                <Label Text="{Binding RegularPriceInclTax, Converter={StaticResource Price}}" FontSize="10" TextColor="{StaticResource Gray400}" TextDecorations="Strikethrough" VerticalOptions="Center" />
-                                            </HorizontalStackLayout>
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <HorizontalStackLayout Grid.Column="0" Spacing="3" VerticalOptions="Center">
+                                                    <Label Text="{Binding CheapestPriceInclTax, Converter={StaticResource Price}}" FontSize="13" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
+                                                    <Label Text="{Binding RegularPriceInclTax, Converter={StaticResource Price}}" FontSize="10" TextColor="{StaticResource Gray400}" TextDecorations="Strikethrough" VerticalOptions="Center" />
+                                                </HorizontalStackLayout>
+                                                <Button Grid.Column="1" Text="+" FontSize="16" FontAttributes="Bold" WidthRequest="32" HeightRequest="32" Padding="0" CornerRadius="16"
+                                                        BackgroundColor="{StaticResource Primary}" TextColor="White"
+                                                        Clicked="OnAddTapped"
+                                                        Command="{Binding Source={x:Reference Page}, Path=BindingContext.AddToCartCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                            </Grid>
                                         </VerticalStackLayout>
                                     </Border>
                                 </DataTemplate>
@@ -100,7 +107,10 @@
                                 CommandParameter="{Binding .}" />
                         </Border.GestureRecognizers>
                         <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
-                            <Label Text="{Binding Icon}" FontSize="40" HorizontalOptions="Center" />
+                            <Grid HeightRequest="48" WidthRequest="48">
+                                <Image Source="{Binding FullImageUrl}" Aspect="AspectFill" IsVisible="{Binding HasImage}" />
+                                <Label Text="{Binding Glyph}" FontSize="40" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding HasImage, Converter={StaticResource Invert}}" />
+                            </Grid>
                             <Label Text="{Binding NameAr}" FontSize="13" FontAttributes="Bold" HorizontalTextAlignment="Center" TextColor="{StaticResource Gray900}" />
                             <Label FontSize="11" TextColor="{StaticResource Gray400}" HorizontalTextAlignment="Center">
                                 <Label.FormattedText><FormattedString>

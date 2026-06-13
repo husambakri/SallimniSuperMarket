@@ -54,9 +54,10 @@
                                            Text="{Binding RegularPriceInclTax, Converter={StaticResource Price}}" />
                                 </VerticalStackLayout>
 
-                                <Button Grid.Column="1" Text="+" FontSize="20" FontAttributes="Bold"
-                                        WidthRequest="40" HeightRequest="40" Padding="0" CornerRadius="20"
+                                <Button Grid.Column="1" Text="+" FontSize="24" FontAttributes="Bold"
+                                        WidthRequest="46" HeightRequest="46" Padding="0" CornerRadius="23"
                                         BackgroundColor="{StaticResource Primary}" TextColor="White" VerticalOptions="End"
+                                        Clicked="OnAddTapped"
                                         Command="{Binding Source={x:Reference Page}, Path=BindingContext.AddToCartCommand}"
                                         CommandParameter="{Binding .}" />
                             </Grid>

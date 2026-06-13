@@ -11,8 +11,12 @@ public class Category : BaseEntity
     public Guid? ParentId { get; set; }
     public Category? Parent { get; set; }
 
-    /// <summary>أيقونة العرض (رمز تعبيري) لشبكة الأصناف.</summary>
+    /// <summary>أيقونة العرض (رمز تعبيري) لشبكة الأصناف — بديل عند غياب صورة.</summary>
     public string? Icon { get; set; }
+    /// <summary>رابط صورة التصنيف العام (عند رفع صورة).</summary>
+    public string? ImageUrl { get; set; }
+    public byte[]? ImageData { get; set; }
+    public string? ImageContentType { get; set; }
     public int SortOrder { get; set; }
 
     public ICollection<Product> Products { get; set; } = new List<Product>();
