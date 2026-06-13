@@ -22,9 +22,6 @@ if (!string.IsNullOrWhiteSpace(port))
 
 var app = builder.Build();
 
-// تطبيق الهجرات + بذر بيانات أولية (يبذر فقط إن كانت القاعدة فارغة) — مع إعادة محاولة لإقلاع القاعدة.
-await MigrateAndSeedAsync(app);
-
 // Swagger متاح في كل البيئات لتسهيل تجربة الـ API المنشور.
 app.UseSwagger();
 app.UseSwaggerUI();
@@ -37,6 +34,10 @@ app.MapControllers();
 // فحص صحّة للنشر + جذر يوجّه إلى Swagger.
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "sallimni-api" }));
 app.MapGet("/", () => Results.Redirect("/swagger"));
+
+// الهجرات والبذر تعمل في الخلفية: لا تؤخّر إقلاع الخادم ولا تُسقطه إن تأخّرت القاعدة،
+// فيستجيب /health فوراً وينجح فحص النشر، وتكتمل الهجرة بمجرّد توفّر DATABASE_URL.
+_ = MigrateAndSeedAsync(app);
 
 app.Run();
 
@@ -67,24 +68,27 @@ static string ConvertDatabaseUrl(string url)
            "SSL Mode=Prefer;Trust Server Certificate=true";
 }
 
+// تُشغَّل في الخلفية: تُعيد المحاولة حتى تتوفّر القاعدة دون أن تُسقط التطبيق إطلاقاً.
 static async Task MigrateAndSeedAsync(WebApplication app)
 {
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<SallimniDbContext>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+    var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
 
-    for (var attempt = 1; attempt <= 10; attempt++)
+    for (var attempt = 1; attempt <= 30; attempt++)
     {
         try
         {
+            using var scope = app.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<SallimniDbContext>();
             await db.Database.MigrateAsync();
             await DataSeeder.SeedAsync(db);
+            logger.LogInformation("Database migrated and seeded successfully.");
             return;
         }
-        catch (Exception ex) when (attempt < 10)
+        catch (Exception ex)
         {
-            logger.LogWarning("DB not ready (attempt {Attempt}/10): {Message}", attempt, ex.Message);
-            await Task.Delay(TimeSpan.FromSeconds(3));
+            logger.LogWarning("DB not ready (attempt {Attempt}/30): {Message}", attempt, ex.Message);
+            await Task.Delay(TimeSpan.FromSeconds(5));
         }
     }
+    logger.LogError("Database migration did not complete after retries. Ensure DATABASE_URL is linked.");
 }
