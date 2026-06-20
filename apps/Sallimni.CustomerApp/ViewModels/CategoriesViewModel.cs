@@ -37,21 +37,19 @@ public partial class CategoriesViewModel : BaseViewModel
         try
         {
             await EnsureCustomerAsync();
-            var baseUrlForCats = _config.BaseUrl.TrimEnd('/');
             var cats = await _api.GetCategoriesAsync();
             Categories.Clear();
             foreach (var c in cats)
             {
-                if (!string.IsNullOrEmpty(c.ImageUrl)) c.FullImageUrl = baseUrlForCats + c.ImageUrl;
+                c.FullImageUrl = _config.ResolveImageUrl(c.ImageUrl);
                 Categories.Add(c);
             }
 
-            var baseUrl = _config.BaseUrl.TrimEnd('/');
             var offers = await _api.GetOffersAsync(10);
             Offers.Clear();
             foreach (var o in offers)
             {
-                if (!string.IsNullOrEmpty(o.ImageUrl)) o.FullImageUrl = baseUrl + o.ImageUrl;
+                o.FullImageUrl = _config.ResolveImageUrl(o.ImageUrl);
                 Offers.Add(o);
             }
             OnPropertyChanged(nameof(HasOffers));

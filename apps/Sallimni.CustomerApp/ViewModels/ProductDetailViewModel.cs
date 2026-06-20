@@ -46,8 +46,7 @@ public partial class ProductDetailViewModel : BaseViewModel, IQueryAttributable
         try
         {
             var p = await _api.GetProductAsync(id);
-            if (p is not null && !string.IsNullOrEmpty(p.ImageUrl))
-                p.FullImageUrl = _config.BaseUrl.TrimEnd('/') + p.ImageUrl;
+            if (p is not null) p.FullImageUrl = _config.ResolveImageUrl(p.ImageUrl);
             Product = p;
         }
         catch (Exception ex) { ErrorMessage = ex.Message; }

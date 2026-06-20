@@ -47,12 +47,11 @@ public partial class ProductsViewModel : BaseViewModel, IQueryAttributable
         IsBusy = true; ErrorMessage = null;
         try
         {
-            var baseUrl = _config.BaseUrl.TrimEnd('/');
             var products = await _api.GetProductsAsync(_categoryId, _query);
             Products.Clear();
             foreach (var p in products)
             {
-                if (!string.IsNullOrEmpty(p.ImageUrl)) p.FullImageUrl = baseUrl + p.ImageUrl;
+                p.FullImageUrl = _config.ResolveImageUrl(p.ImageUrl);
                 Products.Add(p);
             }
         }

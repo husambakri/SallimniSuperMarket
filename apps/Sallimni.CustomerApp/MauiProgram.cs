@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Sallimni.CustomerApp.Services;
 using Sallimni.CustomerApp.ViewModels;
 using Sallimni.CustomerApp.Views;
+using ZXing.Net.Maui.Controls;
 
 namespace Sallimni.CustomerApp;
 
@@ -18,6 +19,7 @@ public static class MauiProgram
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()
+			.UseBarcodeReader()
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -67,4 +69,18 @@ public static class MauiProgram
 public class AppConfig
 {
 	public string BaseUrl { get; set; } = "http://localhost:5080/";
+
+	/// <summary>
+	/// يحوّل رابط صورة الخادم إلى رابط مطلق قابل للعرض:
+	/// الروابط المطلقة (http/https — مثل صور طلبات) تُعاد كما هي،
+	/// والمسارات النسبية (مثل /api/catalog/...) يُسبَق إليها عنوان الخادم.
+	/// </summary>
+	public string? ResolveImageUrl(string? imageUrl)
+	{
+		if (string.IsNullOrEmpty(imageUrl)) return null;
+		if (imageUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+		    imageUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+			return imageUrl;
+		return BaseUrl.TrimEnd('/') + imageUrl;
+	}
 }

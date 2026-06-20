@@ -27,6 +27,36 @@ public partial class ScanViewModel : BaseViewModel
     [ObservableProperty] private bool _hasResult;
     [ObservableProperty] private BarcodeLookupDto? _result;
 
+    /// <summary>هل الكاميرا قيد المسح الآن (يُظهر معاينة الكاميرا الحيّة).</summary>
+    [ObservableProperty] private bool _isScanning;
+
+    /// <summary>تبديل تشغيل/إيقاف مسح الكاميرا (يطلب إذن الكاميرا عند التشغيل).</summary>
+    [RelayCommand]
+    private async Task ToggleScanAsync()
+    {
+        if (!IsScanning)
+        {
+            var status = await Permissions.RequestAsync<Permissions.Camera>();
+            if (status != PermissionStatus.Granted)
+            {
+                ErrorMessage = "تعذّر الوصول للكاميرا — فعّل الإذن من إعدادات الجهاز.";
+                return;
+            }
+            ErrorMessage = null;
+        }
+        IsScanning = !IsScanning;
+    }
+
+    /// <summary>يُستدعى من الصفحة عند التقاط الكاميرا لباركود: يوقف المسح ويفحص السعر.</summary>
+    public async Task OnBarcodeScannedAsync(string code)
+    {
+        code = (code ?? "").Trim();
+        if (code.Length == 0) return;
+        IsScanning = false;
+        Barcode = code;
+        await LookupAsync();
+    }
+
     [RelayCommand]
     private async Task LookupAsync()
     {
