@@ -10,6 +10,9 @@
 *.user
 *.suo
 
+# نسخة عمل من ملف إكسل الكتالوج (كبير) — لا يُرفع؛ TSV الناتج هو المعتمد
+tools/catalog.xlsx
+
 # MAUI / .NET
 *.binlog
 project.lock.json

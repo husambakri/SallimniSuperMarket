@@ -20,4 +20,9 @@
     <ProjectReference Include="..\Sallimni.Infrastructure\Sallimni.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- بيانات الكتالوج الحقيقي (طلبات-الأردن) — تُنسخ لمجلد الإخراج ليقرأها CatalogImporter. -->
+    <None Include="Seeding\catalog-seed.tsv" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

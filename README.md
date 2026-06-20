@@ -40,6 +40,15 @@ dotnet run --no-launch-profile
 | POST | `/api/orders` | تأكيد الطلب (تقسيم + ETA + موجة) |
 | GET | `/api/orders/{id}` | تفاصيل الطلب وطلباته الفرعية |
 
+## كتالوج حقيقي (طلبات-الأردن) ✅
+الكتالوج مبذور من بيانات سوق حقيقية: **12 متجراً، 26 فئة، 32,489 صنفاً، ~53,500 سعر تاجر** (نفس الصنف عبر تجار = مقارنة أسعار وتوفير حقيقي). الصور روابط مباشرة، والباركود = SKU لفحص السعر.
+
+- المصدر: ملف إكسل → محوّل إلى `src/Sallimni.Api/Seeding/catalog-seed.tsv` (عبر [`tools/convert-catalog.ps1`](tools/convert-catalog.ps1)).
+- المستورِد: [`CatalogImporter`](src/Sallimni.Api/Seeding/CatalogImporter.cs) — تجميع بالـ SKU، إدراج دفعي، وتنظيف أسعار شاذّة لكل صنف (فلتر وسيط).
+- **قاعدة فارغة:** يُستورد تلقائياً عند الإقلاع (ضمن `DataSeeder`).
+- **قاعدة مزروعة مسبقاً (مثل Railway):** استدعِ مرّةً
+  `POST /api/maintenance/import-catalog?confirm=RESET` (يمسح الكتالوج والطلبات ويُعيد التحميل؛ يُبقي الزبائن/السائقين/الإعدادات). الحالة عبر `GET /api/maintenance/catalog-status`.
+
 ## تطبيق الزبون (.NET MAUI)
 `apps/Sallimni.CustomerApp` — منصّات الإصدار الأول: **Android + Windows** (iOS/Mac لاحقاً عند توفّر جهاز Mac).
 معماريّة MVVM (CommunityToolkit.Mvvm)، هوية برتقاليّة، عربي/إنجليزي مع RTL حيّ.

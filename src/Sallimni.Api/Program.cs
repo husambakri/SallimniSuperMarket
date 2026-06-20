@@ -80,7 +80,7 @@ static async Task MigrateAndSeedAsync(WebApplication app)
             using var scope = app.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<SallimniDbContext>();
             await db.Database.MigrateAsync();
-            await DataSeeder.SeedAsync(db);
+            await DataSeeder.SeedAsync(db, logger);
             logger.LogInformation("Database migrated and seeded successfully.");
             return;
         }
