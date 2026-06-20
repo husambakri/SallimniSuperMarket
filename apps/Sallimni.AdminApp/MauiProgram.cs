@@ -58,4 +58,17 @@ public static class MauiProgram
 public class AppConfig
 {
 	public string BaseUrl { get; set; } = "http://localhost:5080/";
+
+	/// <summary>
+	/// يحوّل رابط صورة الخادم إلى رابط مطلق: الروابط المطلقة (http/https — صور طلبات)
+	/// تُعاد كما هي، والمسارات النسبية (/api/...) يُسبَق إليها عنوان الخادم.
+	/// </summary>
+	public string? ResolveImageUrl(string? imageUrl)
+	{
+		if (string.IsNullOrEmpty(imageUrl)) return null;
+		if (imageUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+		    imageUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+			return imageUrl;
+		return BaseUrl.TrimEnd('/') + imageUrl;
+	}
 }

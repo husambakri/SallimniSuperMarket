@@ -115,13 +115,11 @@ public partial class CatalogViewModel : BaseViewModel
             SelectedCategory ??= Categories.FirstOrDefault();
             SelectedTax ??= TaxOptions.Last(); // 16% افتراضي
 
-            var baseUrl = _config.BaseUrl.TrimEnd('/');
             var prods = await _api.GetProductsAsync();
             Products.Clear();
             foreach (var p in prods)
             {
-                if (!string.IsNullOrEmpty(p.ImageUrl))
-                    p.FullImageUrl = baseUrl + p.ImageUrl; // ImageUrl نسبي (/api/...)
+                p.FullImageUrl = _config.ResolveImageUrl(p.ImageUrl);
                 Products.Add(p);
             }
         }
