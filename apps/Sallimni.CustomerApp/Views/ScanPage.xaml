@@ -21,10 +21,30 @@
 
             <!-- معاينة الكاميرا الحيّة — تظهر فقط أثناء المسح -->
             <Border IsVisible="{Binding IsScanning}" StrokeShape="RoundRectangle 16" StrokeThickness="2"
-                    Stroke="{StaticResource Primary}" HeightRequest="280" Padding="0">
-                <zxing:CameraBarcodeReaderView x:Name="Reader"
-                        IsDetecting="{Binding IsScanning}"
-                        BarcodesDetected="OnBarcodesDetected" />
+                    Stroke="{StaticResource Primary}" HeightRequest="300" Padding="0">
+                <Grid>
+                    <zxing:CameraBarcodeReaderView x:Name="Reader"
+                            IsDetecting="{Binding IsScanning}"
+                            BarcodesDetected="OnBarcodesDetected" />
+
+                    <!-- طبقة فوق الكاميرا (لا تلمس تدفّق الإطارات): نافذة مسح + خط أحمر متوهّج.
+                         العمود الأوسط 8* من 10 = عرض 80٪؛ InputTransparent يمرّر اللمس. -->
+                    <Grid ColumnDefinitions="*,8*,*" RowDefinitions="*,Auto,*" InputTransparent="True">
+                        <!-- إطار نافذة المسح (دليل بصري للمنتصف) -->
+                        <Border Grid.Column="1" Grid.Row="1" HeightRequest="130"
+                                Stroke="#80FFFFFF" StrokeThickness="1.5"
+                                StrokeShape="RoundRectangle 12" BackgroundColor="Transparent"
+                                InputTransparent="True" />
+                        <!-- الخط الأحمر: عرض 80٪، سماكة 3، أحمر شفاف قليلاً + توهّج -->
+                        <BoxView Grid.Column="1" Grid.Row="1" HeightRequest="3" CornerRadius="2"
+                                 Color="#E6FF2222" HorizontalOptions="Fill" VerticalOptions="Center"
+                                 InputTransparent="True">
+                            <BoxView.Shadow>
+                                <Shadow Brush="Red" Radius="12" Opacity="0.9" Offset="0,0" />
+                            </BoxView.Shadow>
+                        </BoxView>
+                    </Grid>
+                </Grid>
             </Border>
 
             <!-- إدخال يدوي بديل -->
@@ -40,6 +60,19 @@
             <Border IsVisible="{Binding HasResult}" StrokeShape="RoundRectangle 16" Padding="18"
                     StrokeThickness="1" Stroke="{StaticResource Gray200}">
                 <VerticalStackLayout Spacing="10">
+                    <!-- صورة المنتج (أو رمز تعبيري بديل) عند توفّر النتيجة -->
+                    <Border IsVisible="{Binding Result.Found}" HeightRequest="160" WidthRequest="160"
+                            HorizontalOptions="Center" StrokeThickness="0" BackgroundColor="{StaticResource Gray100}"
+                            StrokeShape="RoundRectangle 14" Padding="0">
+                        <Grid>
+                            <Image Source="{Binding Result.FullImageUrl}" Aspect="AspectFit" Margin="8"
+                                   IsVisible="{Binding Result.HasImage}" />
+                            <Label Text="{Binding Result.Glyph}" FontSize="72"
+                                   HorizontalOptions="Center" VerticalOptions="Center"
+                                   IsVisible="{Binding Result.HasImage, Converter={StaticResource Invert}}" />
+                        </Grid>
+                    </Border>
+
                     <Label Text="{Binding Result.NameAr}" FontSize="18" FontAttributes="Bold"
                            IsVisible="{Binding Result.Found}" />
                     <HorizontalStackLayout Spacing="8" IsVisible="{Binding Result.Found}">

@@ -76,6 +76,12 @@ public class BarcodeLookupDto
     public decimal? OurPriceInclTax { get; set; }
     public decimal? RegularPriceInclTax { get; set; }
     public int SavingsPercent { get; set; }
+
+    // مشتقّات العرض
+    public string Glyph => string.IsNullOrEmpty(Emoji) ? "🛒" : Emoji!;
+    /// <summary>الرابط المطلق للصورة (يُحقن من قاعدة عنوان الخادم)؛ فارغ إن لا صورة.</summary>
+    public string? FullImageUrl { get; set; }
+    public bool HasImage => !string.IsNullOrEmpty(FullImageUrl);
 }
 
 public class CustomerDto

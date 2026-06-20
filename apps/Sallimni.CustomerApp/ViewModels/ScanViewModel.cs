@@ -15,12 +15,14 @@ public partial class ScanViewModel : BaseViewModel
     private readonly ApiClient _api;
     private readonly CartService _cart;
     private readonly AppState _state;
+    private readonly AppConfig _config;
 
-    public ScanViewModel(ApiClient api, CartService cart, AppState state)
+    public ScanViewModel(ApiClient api, CartService cart, AppState state, AppConfig config)
     {
         _api = api;
         _cart = cart;
         _state = state;
+        _config = config;
     }
 
     [ObservableProperty] private string _barcode = "";
@@ -67,7 +69,9 @@ public partial class ScanViewModel : BaseViewModel
         HasResult = false;
         try
         {
-            Result = await _api.LookupBarcodeAsync(code, _state.CurrentCustomer?.Id);
+            var res = await _api.LookupBarcodeAsync(code, _state.CurrentCustomer?.Id);
+            if (res is not null) res.FullImageUrl = _config.ResolveImageUrl(res.ImageUrl);
+            Result = res;
             HasResult = true;
         }
         catch (Exception ex)
@@ -89,6 +93,8 @@ public partial class ScanViewModel : BaseViewModel
             NameAr = Result.NameAr ?? "",
             NameEn = Result.NameEn ?? "",
             ImageUrl = Result.ImageUrl,
+            FullImageUrl = Result.FullImageUrl,
+            Emoji = Result.Emoji,
             CheapestPriceInclTax = Result.OurPriceInclTax
         });
     }
