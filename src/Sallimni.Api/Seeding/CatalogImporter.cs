@@ -89,7 +89,7 @@ public static class CatalogImporter
                 var name = f[3].Trim();
                 var priceStr = f[4].Trim();
                 var img = f[5].Trim();
-                var sku = f[6].Trim();
+                var sku = NormalizeBarcode(f[6]);
                 if (store.Length == 0 || name.Length == 0) continue;
 
                 // المتجر
@@ -233,6 +233,32 @@ public static class CatalogImporter
         var radius = 0.015 + (index % 5) * 0.006;
         m.Latitude = centerLat + radius * Math.Cos(angle);
         m.Longitude = centerLon + radius * Math.Sin(angle);
+    }
+
+    /// <summary>
+    /// تطبيع الباركود: المصدر يخلط صيغاً لنفس المنتج (EAN نظيف، أو مسبوق بكود داخلي مثل
+    /// "503185_6253339102080"، أو باركودين بفاصلة). نستخرج أطول سلسلة أرقام = الـEAN الذي
+    /// يُمسح فعلياً، فتتوحّد بطاقة الصنف عبر التجار. الرموز الداخلية غير الرقمية تبقى كما هي.
+    /// </summary>
+    private static string NormalizeBarcode(string? sku)
+    {
+        sku = sku?.Trim() ?? string.Empty;
+        if (sku.Length == 0) return string.Empty;
+
+        var best = "";
+        var i = 0;
+        while (i < sku.Length)
+        {
+            if (char.IsDigit(sku[i]))
+            {
+                var j = i;
+                while (j < sku.Length && char.IsDigit(sku[j])) j++;
+                if (j - i > best.Length) best = sku.Substring(i, j - i);
+                i = j;
+            }
+            else i++;
+        }
+        return best.Length >= 6 ? best : sku; // ≥6 أرقام = باركود معقول؛ وإلا رمز داخلي
     }
 
     private static string Humanize(string slug)
