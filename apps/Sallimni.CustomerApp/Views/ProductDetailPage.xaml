@@ -3,13 +3,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Sallimni.CustomerApp.ViewModels"
              xmlns:svc="clr-namespace:Sallimni.CustomerApp.Services"
+             xmlns:views="clr-namespace:Sallimni.CustomerApp.Views"
              x:Class="Sallimni.CustomerApp.Views.ProductDetailPage"
              x:DataType="vm:ProductDetailViewModel"
              FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
              Title="{Binding Product.NameAr}">
 
-    <Grid RowDefinitions="*,Auto">
-        <ScrollView Grid.Row="0">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <views:HeaderView Grid.Row="0" />
+        <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="20" Spacing="14">
 
                 <!-- صورة كبيرة (رمز) + شارة التوفير -->
@@ -45,7 +47,7 @@
         </ScrollView>
 
         <!-- زرّ الإضافة الثابت -->
-        <Border Grid.Row="1" Padding="16" StrokeThickness="0" BackgroundColor="{StaticResource Gray100}">
+        <Border Grid.Row="2" Padding="16" StrokeThickness="0" BackgroundColor="{StaticResource Gray100}">
             <Button x:Name="AddButton" Text="{svc:Translate Key=detail.add}" Command="{Binding AddToCartCommand}"
                     Clicked="OnAddTapped"
                     BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="24" HeightRequest="52" FontAttributes="Bold" FontSize="16" />

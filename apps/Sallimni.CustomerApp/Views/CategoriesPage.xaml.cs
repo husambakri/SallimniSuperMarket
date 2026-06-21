@@ -21,4 +21,6 @@ public partial class CategoriesPage : ContentPage
     }
 
     private void OnAddTapped(object? sender, EventArgs e) => AddFeedback.Bounce(sender);
+
+    private async void OnOpenCart(object? sender, TappedEventArgs e) => await Shell.Current.GoToAsync("//cart");
 }

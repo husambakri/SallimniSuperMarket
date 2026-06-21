@@ -4,13 +4,16 @@
              xmlns:vm="clr-namespace:Sallimni.CustomerApp.ViewModels"
              xmlns:m="clr-namespace:Sallimni.CustomerApp.Models"
              xmlns:svc="clr-namespace:Sallimni.CustomerApp.Services"
+             xmlns:views="clr-namespace:Sallimni.CustomerApp.Views"
              x:Class="Sallimni.CustomerApp.Views.ProductsPage"
              x:Name="Page"
              x:DataType="vm:ProductsViewModel"
              FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
              Title="{Binding Title}">
 
-    <RefreshView IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
+    <Grid RowDefinitions="Auto,*">
+        <views:HeaderView Grid.Row="0" />
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
         <CollectionView ItemsSource="{Binding Products}" Margin="10">
             <CollectionView.ItemsLayout>
                 <GridItemsLayout Orientation="Vertical" Span="2" HorizontalItemSpacing="10" VerticalItemSpacing="10" />
@@ -29,11 +32,12 @@
                         </Grid.GestureRecognizers>
 
                         <!-- صندوق الصورة: خلفية فاتحة + حواف مدوّرة -->
-                        <Border Grid.Row="0" StrokeThickness="0" BackgroundColor="{StaticResource Gray100}"
-                                StrokeShape="RoundRectangle 14" HeightRequest="140" Padding="12">
+                        <Border Grid.Row="0" StrokeThickness="1" BackgroundColor="White"
+                                HeightRequest="165" WidthRequest="165"
+                                StrokeShape="RoundRectangle 14" Padding="0">
                             <Grid>
                                 <Image Source="{Binding FullImageUrl}" Aspect="AspectFit" IsVisible="{Binding HasImage}"
-                                       WidthRequest="110" HeightRequest="110"
+                                      
                                        HorizontalOptions="Center" VerticalOptions="Center" />
                                 <Label Text="{Binding Glyph}" FontSize="56" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding HasImage, Converter={StaticResource Invert}}" />
                                 <Border IsVisible="{Binding HasSavings}" BackgroundColor="#FFF3C4" Padding="6,2"
@@ -56,7 +60,7 @@
                             <!-- الاسم: ارتفاع ثابت لسطرين -->
                             <Label Grid.Row="1" Text="{Binding NameAr}" FontSize="13.5" FontAttributes="Bold"
                                    TextColor="{StaticResource Gray900}" MaxLines="2" LineBreakMode="TailTruncation"
-                                   HeightRequest="38" VerticalTextAlignment="Start" />
+                                  VerticalTextAlignment="Start" />
 
                             <!-- الوحدة -->
                             <Label Grid.Row="2" Text="{Binding UnitSize}" FontSize="11" TextColor="{StaticResource Gray400}" />
@@ -75,5 +79,6 @@
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
-    </RefreshView>
+        </RefreshView>
+    </Grid>
 </ContentPage>

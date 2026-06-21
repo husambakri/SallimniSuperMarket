@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:svc="clr-namespace:Sallimni.CustomerApp.Services"
+             x:Class="Sallimni.CustomerApp.Views.HeaderView">
+
+    <!-- ترويسة موحّدة: شريط بحث + أيقونة سلة بعدّاد — تبقى أعلى صفحات التصفّح. -->
+    <Border BackgroundColor="{StaticResource Primary}" Padding="12,10" StrokeThickness="0">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+
+            <!-- البحث -->
+            <Border Grid.Column="0" BackgroundColor="White" Padding="6,2" StrokeShape="RoundRectangle 22" StrokeThickness="0" VerticalOptions="Center">
+                <Grid ColumnDefinitions="Auto,*">
+                    <Label Grid.Column="0" Text="🔍" FontSize="16" VerticalOptions="Center" Margin="8,0,0,0" />
+                    <Entry Grid.Column="1" x:Name="SearchEntry" Placeholder="{svc:Translate Key=home.search}"
+                           Completed="OnSearch" ReturnType="Search" BackgroundColor="Transparent" />
+                </Grid>
+            </Border>
+
+            <!-- السلة -->
+            <Grid Grid.Column="1" WidthRequest="48" HeightRequest="48" VerticalOptions="Center">
+                <Border BackgroundColor="White" StrokeShape="RoundRectangle 24" StrokeThickness="0">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnOpenCart" />
+                    </Border.GestureRecognizers>
+                    <Label Text="🛒" FontSize="22" HorizontalOptions="Center" VerticalOptions="Center" />
+                </Border>
+                <!-- عدّاد العناصر -->
+                <Border x:Name="Badge" IsVisible="False" BackgroundColor="#E53935" StrokeThickness="0"
+                        StrokeShape="RoundRectangle 10" Padding="5,1" MinimumWidthRequest="20"
+                        HorizontalOptions="End" VerticalOptions="Start" Margin="0,-2,-2,0" InputTransparent="True">
+                    <Label x:Name="CountLabel" Text="0" FontSize="11" FontAttributes="Bold" TextColor="White"
+                           HorizontalTextAlignment="Center" />
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
+</ContentView>
