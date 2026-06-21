@@ -50,7 +50,7 @@ public partial class SettingsViewModel : BaseViewModel
         var page = Application.Current?.Windows.FirstOrDefault()?.Page;
         if (page is null) return;
         var loc = LocalizationManager.Instance;
-        var ok = await page.DisplayAlertAsync(loc["settings.delete"], loc["settings.delete_confirm"],
+        var ok = await page.DisplayAlert(loc["settings.delete"], loc["settings.delete_confirm"],
             loc["common.yes"], loc["common.no"]);
         if (!ok) return;
 
@@ -58,13 +58,13 @@ public partial class SettingsViewModel : BaseViewModel
         try
         {
             await _api.DeleteAccountAsync(_state.CurrentCustomer.Id);
-            await page.DisplayAlertAsync(loc["settings.delete"], loc["settings.deleted"], loc["common.ok"]);
+            await page.DisplayAlert(loc["settings.delete"], loc["settings.deleted"], loc["common.ok"]);
             _state.CurrentCustomer = null;
             _state.SelectedAddress = null;
         }
         catch (Exception ex)
         {
-            await page.DisplayAlertAsync(loc["common.error"], ex.Message, loc["common.ok"]);
+            await page.DisplayAlert(loc["common.error"], ex.Message, loc["common.ok"]);
         }
     }
 }

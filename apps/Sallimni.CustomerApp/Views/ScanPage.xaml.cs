@@ -1,39 +1,30 @@
 using Sallimni.CustomerApp.ViewModels;
-using ZXing.Net.Maui;
+using BarcodeScanning;
 
 namespace Sallimni.CustomerApp.Views;
 
 public partial class ScanPage : ContentPage
 {
     private readonly ScanViewModel _vm;
-    private bool _handling;                       // يمنع المعالجة المتزامنة
-    private DateTime _lastHit = DateTime.MinValue; // Throttle: لا نعالج أكثر من ~4 مرّات/ثانية
+    private bool _handling;                        // يمنع المعالجة المتزامنة
+    private DateTime _lastHit = DateTime.MinValue;  // Throttle: لا نعالج أكثر من ~4 مرّات/ثانية
     private static readonly TimeSpan ThrottleWindow = TimeSpan.FromMilliseconds(250);
 
     public ScanPage(ScanViewModel vm)
     {
         InitializeComponent();
         BindingContext = _vm = vm;
-
-        // بدون ضبط الصيغ يكون الكشف معطّلاً (الافتراضي = لا شيء). نُفعّل باركودات
-        // البقالة أحادية البُعد (EAN-13/EAN-8/UPC-A/UPC-E/Code128/Code39) مع تدوير تلقائي.
-        Reader.Options = new BarcodeReaderOptions
-        {
-            Formats = BarcodeFormats.OneDimensional,
-            AutoRotate = true,
-            Multiple = false
-        };
     }
 
-    // يُطلَق على خيط خلفي (المكتبة تفكّ الترميز بعيداً عن خيط الواجهة) عند التقاط باركود.
-    // نطبّق Throttle + حارس تزامن، ثم ننقل تحديث الواجهة/الفحص لخيط الواجهة فقط.
-    private void OnBarcodesDetected(object? sender, BarcodeDetectionEventArgs e)
+    // يُطلَق على خيط خلفي (المحرّك الأصلي ML Kit/Vision يحلّل الإطارات بعيداً عن خيط الواجهة).
+    // نطبّق Throttle + حارس تزامن، ثم ننقل الفحص/تحديث الواجهة لخيط الواجهة فقط.
+    private void OnDetectionFinished(object? sender, OnDetectionFinishedEventArg e)
     {
         if (_handling) return;
         var now = DateTime.UtcNow;
-        if (now - _lastHit < ThrottleWindow) return; // تجاهل الإطارات المتلاحقة
+        if (now - _lastHit < ThrottleWindow) return;
 
-        var code = e.Results?.FirstOrDefault()?.Value;
+        var code = e.BarcodeResults?.FirstOrDefault()?.DisplayValue;
         if (string.IsNullOrWhiteSpace(code)) return;
 
         _lastHit = now;

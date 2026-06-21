@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Sallimni.CustomerApp.ViewModels"
              xmlns:svc="clr-namespace:Sallimni.CustomerApp.Services"
-             xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.Maui.Controls"
+             xmlns:scanner="clr-namespace:BarcodeScanning;assembly=BarcodeScanning.Native.Maui"
              x:Class="Sallimni.CustomerApp.Views.ScanPage"
              x:DataType="vm:ScanViewModel"
              FlowDirection="{Binding IsRtl, Source={x:Static svc:LocalizationManager.Instance}, Converter={StaticResource FlowDir}}"
@@ -15,16 +15,27 @@
             <Label Text="{svc:Translate Key=scan.title}" FontSize="22" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
             <Label Text="{svc:Translate Key=scan.hint}" FontSize="13" TextColor="{StaticResource Gray500}" />
 
-            <!-- زرّ تشغيل/إيقاف مسح الكاميرا الحيّ -->
+            <!-- زرّ تشغيل/إيقاف مسح الكاميرا الحيّ (الكاميرا للهاتف؛ يُخفى على Windows) -->
             <Button Text="📷 امسح بالكاميرا" Command="{Binding ToggleScanCommand}"
-                    BackgroundColor="{StaticResource PrimaryDark}" TextColor="White" CornerRadius="22" />
+                    BackgroundColor="{StaticResource PrimaryDark}" TextColor="White" CornerRadius="22">
+                <Button.IsVisible>
+                    <OnPlatform x:TypeArguments="x:Boolean">
+                        <On Platform="Android,iOS" Value="True" />
+                        <On Platform="WinUI" Value="False" />
+                    </OnPlatform>
+                </Button.IsVisible>
+            </Button>
 
             <!-- معاينة الكاميرا الحيّة — تظهر فقط أثناء المسح -->
             <Border IsVisible="{Binding IsScanning}" StrokeShape="RoundRectangle 16" StrokeThickness="2"
                     Stroke="{StaticResource Primary}" HeightRequest="300" Padding="0">
-                <zxing:CameraBarcodeReaderView x:Name="Reader"
-                        IsDetecting="{Binding IsScanning}"
-                        BarcodesDetected="OnBarcodesDetected" />
+                <scanner:CameraView x:Name="Reader"
+                        CameraEnabled="{Binding IsScanning}"
+                        VibrationOnDetected="True"
+                        ViewfinderMode="True"
+                        CaptureQuality="Medium"
+                        BarcodeSymbologies="All"
+                        OnDetectionFinished="OnDetectionFinished" />
             </Border>
 
             <!-- إدخال يدوي بديل -->

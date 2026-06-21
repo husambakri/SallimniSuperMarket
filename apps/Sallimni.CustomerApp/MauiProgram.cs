@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Sallimni.CustomerApp.Services;
 using Sallimni.CustomerApp.ViewModels;
 using Sallimni.CustomerApp.Views;
-using ZXing.Net.Maui.Controls;
+using BarcodeScanning;
 
 namespace Sallimni.CustomerApp;
 
@@ -19,7 +19,7 @@ public static class MauiProgram
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()
-			.UseBarcodeReader()
+			.UseBarcodeScanning()
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");

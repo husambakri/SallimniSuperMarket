@@ -16,8 +16,8 @@ public partial class ProductDetailPage : ContentPage
         if (sender is not Button b) return;
         var original = b.Text;
         b.Text = "✓ تمت الإضافة إلى السلة";
-        await b.ScaleToAsync(1.05, 90, Easing.CubicOut);
-        await b.ScaleToAsync(1.0, 90, Easing.CubicIn);
+        await b.ScaleTo(1.05, 90, Easing.CubicOut);
+        await b.ScaleTo(1.0, 90, Easing.CubicIn);
         await Task.Delay(900);
         b.Text = original;
     }
