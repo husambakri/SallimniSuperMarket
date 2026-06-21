@@ -23,6 +23,7 @@
   <ItemGroup>
     <!-- بيانات الكتالوج الحقيقي (طلبات-الأردن) — تُنسخ لمجلد الإخراج ليقرأها CatalogImporter. -->
     <None Include="Seeding\catalog-seed.tsv" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Seeding\stores-seed.tsv" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

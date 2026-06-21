@@ -143,7 +143,11 @@ public class CatalogController : ControllerBase
 
     [HttpGet("merchants")]
     public async Task<IActionResult> GetMerchants(CancellationToken ct)
-        => Ok(await _db.Merchants.Select(m => new { m.Id, m.Name, m.IsSalesTaxRegistered }).ToListAsync(ct));
+        => Ok(await _db.Merchants.Select(m => new
+        {
+            m.Id, m.Name, m.IsSalesTaxRegistered,
+            m.Rating, m.MinOrder, m.DeliveryTimeText, m.DeliveryFee, m.CategoryText, m.BranchId
+        }).ToListAsync(ct));
 
     [HttpGet("customers")]
     public async Task<IActionResult> GetCustomers(CancellationToken ct)

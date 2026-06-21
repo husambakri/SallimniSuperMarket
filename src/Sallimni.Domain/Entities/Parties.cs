@@ -17,6 +17,19 @@ public class Merchant : BaseEntity
     /// <summary>مسجّل بضريبة المبيعات؟ (قسم 8.2).</summary>
     public bool IsSalesTaxRegistered { get; set; }
 
+    // بيانات العرض المستوردة من ملف المتاجر (طلبات).
+    public string? BranchId { get; set; }
+    /// <summary>تقييم المتجر (0–5).</summary>
+    public decimal? Rating { get; set; }
+    /// <summary>الحد الأدنى للطلب (دينار).</summary>
+    public decimal? MinOrder { get; set; }
+    /// <summary>نصّ وقت التوصيل التقديري (مثل "Within 22 mins").</summary>
+    public string? DeliveryTimeText { get; set; }
+    /// <summary>رسوم التوصيل (دينار).</summary>
+    public decimal? DeliveryFee { get; set; }
+    /// <summary>تصنيف المتجر النصّي (مثل "Grocery, Supermarket").</summary>
+    public string? CategoryText { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     public ICollection<MerchantProduct> MerchantProducts { get; set; } = new List<MerchantProduct>();

@@ -72,6 +72,10 @@ public static class CatalogImporter
             var mpKeys     = new Dictionary<(Guid, Guid), MerchantProduct>(); // (merchantId, productId) فريد
             var sortOrder  = 0;
 
+            // بيانات المتاجر الغنيّة (التقييم/الحد الأدنى/التوصيل…) من ملف المتاجر، بالاسم.
+            var storesPath = Path.Combine(Path.GetDirectoryName(tsvPath) ?? "", "stores-seed.tsv");
+            var storeInfo  = LoadStores(storesPath, logger);
+
             using var reader = new StreamReader(tsvPath, System.Text.Encoding.UTF8);
             await reader.ReadLineAsync(ct); // تجاوز الترويسة
 
@@ -97,6 +101,7 @@ public static class CatalogImporter
                 {
                     merchant = new Merchant { Name = store, IsSalesTaxRegistered = true, IsActive = true };
                     AssignAmmanLocation(merchant, merchants.Count);
+                    if (storeInfo.TryGetValue(store, out var si)) ApplyStoreInfo(merchant, si);
                     merchants[store] = merchant;
                 }
 
@@ -240,6 +245,49 @@ public static class CatalogImporter
     /// "503185_6253339102080"، أو باركودين بفاصلة). نستخرج أطول سلسلة أرقام = الـEAN الذي
     /// يُمسح فعلياً، فتتوحّد بطاقة الصنف عبر التجار. الرموز الداخلية غير الرقمية تبقى كما هي.
     /// </summary>
+    // ── بيانات المتاجر ──────────────────────────────────────────────────────────
+    private sealed record StoreInfo(
+        string? BranchId, decimal? Rating, decimal? MinOrder,
+        string? DeliveryTime, decimal? DeliveryFee, string? Category);
+
+    /// <summary>يقرأ stores-seed.tsv إلى قاموس بالاسم (أول ظهور يحسم عند التكرار).</summary>
+    private static Dictionary<string, StoreInfo> LoadStores(string path, ILogger logger)
+    {
+        var map = new Dictionary<string, StoreInfo>(StringComparer.OrdinalIgnoreCase);
+        if (!File.Exists(path))
+        {
+            logger.LogWarning("CatalogImporter: ملف المتاجر غير موجود: {Path}", path);
+            return map;
+        }
+        var lines = File.ReadAllLines(path);
+        for (var i = 1; i < lines.Length; i++) // تجاوز الترويسة
+        {
+            var f = lines[i].Split('\t');
+            if (f.Length < 7) continue;
+            var name = f[0].Trim();
+            if (name.Length == 0 || map.ContainsKey(name)) continue;
+            map[name] = new StoreInfo(
+                Blank(f[1]), ParseDec(f[2]), ParseDec(f[3]),
+                Blank(f[4]), ParseDec(f[5]), Blank(f[6]));
+        }
+        return map;
+    }
+
+    private static void ApplyStoreInfo(Merchant m, StoreInfo s)
+    {
+        m.BranchId         = s.BranchId;
+        m.Rating           = s.Rating;
+        m.MinOrder         = s.MinOrder;
+        m.DeliveryTimeText = s.DeliveryTime;
+        m.DeliveryFee      = s.DeliveryFee;
+        m.CategoryText     = s.Category;
+    }
+
+    private static string? Blank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    private static decimal? ParseDec(string? s)
+        => decimal.TryParse((s ?? "").Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var d) ? d : null;
+
     private static string NormalizeBarcode(string? sku)
     {
         sku = sku?.Trim() ?? string.Empty;
