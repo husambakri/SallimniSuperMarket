@@ -12,6 +12,9 @@ builder.Services.AddSwaggerGen();
 var connectionString = ResolveConnectionString(builder.Configuration);
 builder.Services.AddSallimniInfrastructure(connectionString);
 
+// مُجمِّع متاجر البقالة الأردنية (مقارنة أسعار حيّة عند مسح الباركود — للتجربة).
+builder.Services.AddSingleton(new JordanGrocery.GroceryAggregator());
+
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 

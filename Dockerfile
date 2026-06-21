@@ -8,10 +8,13 @@ COPY src/Sallimni.Domain/Sallimni.Domain.csproj src/Sallimni.Domain/
 COPY src/Sallimni.Application/Sallimni.Application.csproj src/Sallimni.Application/
 COPY src/Sallimni.Infrastructure/Sallimni.Infrastructure.csproj src/Sallimni.Infrastructure/
 COPY src/Sallimni.Api/Sallimni.Api.csproj src/Sallimni.Api/
+# مكتبة عملاء البقالة (مرجع مشروع خارج src/).
+COPY JordanGroceryClients/JordanGroceryClients.csproj JordanGroceryClients/
 RUN dotnet restore src/Sallimni.Api/Sallimni.Api.csproj
 
 # نسخ بقية المصدر والنشر.
 COPY src/ src/
+COPY JordanGroceryClients/ JordanGroceryClients/
 RUN dotnet publish src/Sallimni.Api/Sallimni.Api.csproj -c Release -o /app /p:UseAppHost=false
 
 # مرحلة التشغيل

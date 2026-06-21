@@ -84,6 +84,33 @@ public class BarcodeLookupDto
     public bool HasImage => !string.IsNullOrEmpty(FullImageUrl);
 }
 
+// نتيجة المقارنة الحيّة عبر متاجر البقالة الأردنية (JordanGroceryClients) — للتجربة.
+public class ScanCompareResponse
+{
+    public string Barcode { get; set; } = "";
+    public bool TimedOut { get; set; }
+    public int StoresQueried { get; set; }
+    public int Count { get; set; }
+    public List<LiveScanDto> Results { get; set; } = new();
+}
+
+public class LiveScanDto
+{
+    public string Store { get; set; } = "";
+    public string Name { get; set; } = "";
+    public decimal Price { get; set; }
+    public decimal Special { get; set; }
+    public decimal EffectivePrice { get; set; }
+    public bool InStock { get; set; }
+    public string StockStatus { get; set; } = "";
+    public string ImageUrl { get; set; } = "";
+    public string ProductUrl { get; set; } = "";
+
+    public bool HasSpecial => Special > 0 && Special < Price;
+    public bool HasImage => !string.IsNullOrEmpty(ImageUrl);
+    public string Glyph => "🏪";
+}
+
 public class CustomerDto
 {
     public Guid Id { get; set; }

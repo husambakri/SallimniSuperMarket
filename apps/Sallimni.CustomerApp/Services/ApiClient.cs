@@ -41,6 +41,11 @@ public class ApiClient
                ?? new BarcodeLookupDto { Found = false };
     }
 
+    /// <summary>مقارنة سعر حيّة عبر متاجر البقالة الأردنية (تجريبي).</summary>
+    public async Task<ScanCompareResponse> ScanCompareAsync(string code, CancellationToken ct = default)
+        => await _http.GetFromJsonAsync<ScanCompareResponse>($"api/scan-compare/{Uri.EscapeDataString(code)}", JsonOpts, ct)
+           ?? new ScanCompareResponse();
+
     public async Task<OrderDto> PlaceOrderAsync(PlaceOrderRequest req, CancellationToken ct = default)
     {
         var resp = await _http.PostAsJsonAsync("api/orders", req, JsonOpts, ct);

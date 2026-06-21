@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Sallimni.Application\Sallimni.Application.csproj" />
     <ProjectReference Include="..\Sallimni.Infrastructure\Sallimni.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\JordanGroceryClients\JordanGroceryClients.csproj" />
   </ItemGroup>
 
   <ItemGroup>

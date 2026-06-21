@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Sallimni.CustomerApp.Models;
@@ -28,6 +29,11 @@ public partial class ScanViewModel : BaseViewModel
     [ObservableProperty] private string _barcode = "";
     [ObservableProperty] private bool _hasResult;
     [ObservableProperty] private BarcodeLookupDto? _result;
+
+    /// <summary>مقارنة الأسعار الحيّة عبر المتاجر (تجريبي عبر JordanGroceryClients).</summary>
+    public ObservableCollection<LiveScanDto> CompareResults { get; } = new();
+    [ObservableProperty] private bool _isComparing;
+    [ObservableProperty] private bool _hasCompared;
 
     /// <summary>هل الكاميرا قيد المسح الآن (يُظهر معاينة الكاميرا الحيّة).</summary>
     [ObservableProperty] private bool _isScanning;
@@ -67,6 +73,8 @@ public partial class ScanViewModel : BaseViewModel
         IsBusy = true;
         ErrorMessage = null;
         HasResult = false;
+        CompareResults.Clear();
+        HasCompared = false;
         try
         {
             var res = await _api.LookupBarcodeAsync(code, _state.CurrentCustomer?.Id);
@@ -79,6 +87,20 @@ public partial class ScanViewModel : BaseViewModel
             ErrorMessage = ex.Message;
         }
         finally { IsBusy = false; }
+
+        await LoadCompareAsync(code); // مقارنة حيّة عبر المتاجر (بعد عرض نتيجتنا)
+    }
+
+    private async Task LoadCompareAsync(string code)
+    {
+        IsComparing = true;
+        try
+        {
+            var resp = await _api.ScanCompareAsync(code);
+            foreach (var r in resp.Results) CompareResults.Add(r);
+        }
+        catch { /* ميزة تجريبية — نتجاهل الأخطاء */ }
+        finally { IsComparing = false; HasCompared = true; }
     }
 
     public bool CanAddResult => Result is { Found: true, ProductId: not null, OurPriceInclTax: not null };
