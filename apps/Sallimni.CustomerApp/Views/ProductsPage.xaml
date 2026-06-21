@@ -26,41 +26,46 @@
                                 Command="{Binding Source={x:Reference Page}, Path=BindingContext.OpenProductCommand}"
                                 CommandParameter="{Binding .}" />
                         </Border.GestureRecognizers>
-                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" Padding="10" RowSpacing="4">
+                        <!-- صفّ مرن (Row 3) يدفع السعر لأسفل البطاقة؛ ارتفاع الاسم ثابت لسطرين
+                             فتتحاذى كل البطاقات بصرف النظر عن طول الاسم. -->
+                        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Padding="10" RowSpacing="3">
 
-                            <!-- صورة حقيقية أو رمز بديل + شارة التوفير -->
-                            <Grid Grid.Row="0" HeightRequest="90">
+                            <!-- منطقة الصورة: صورة/رمز + شارة التوفير + زرّ الإضافة المتراكب -->
+                            <Grid Grid.Row="0" HeightRequest="120">
                                 <Image Source="{Binding FullImageUrl}" Aspect="AspectFit" IsVisible="{Binding HasImage}" />
-                                <Label Text="{Binding Glyph}" FontSize="52" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding HasImage, Converter={StaticResource Invert}}" />
+                                <Label Text="{Binding Glyph}" FontSize="56" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding HasImage, Converter={StaticResource Invert}}" />
                                 <Border IsVisible="{Binding HasSavings}" BackgroundColor="#FFF3C4" Padding="6,2"
                                         StrokeShape="RoundRectangle 8" StrokeThickness="0"
                                         HorizontalOptions="Start" VerticalOptions="Start">
                                     <Label Text="{Binding SavingsText}" FontSize="10" FontAttributes="Bold" TextColor="#9A6700" />
                                 </Border>
-                            </Grid>
-
-                            <Label Grid.Row="1" Text="{Binding NameAr}" FontSize="14" FontAttributes="Bold" TextColor="{StaticResource Gray900}" MaxLines="2" />
-                            <Label Grid.Row="2" Text="{Binding UnitSize}" FontSize="11" TextColor="{StaticResource Gray400}" />
-
-                            <!-- السعر + السعر العادي المشطوب + زرّ الإضافة -->
-                            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" VerticalOptions="End">
-                                <VerticalStackLayout Grid.Column="0" Spacing="0">
-                                    <HorizontalStackLayout Spacing="3">
-                                        <Label Text="{Binding CheapestPriceInclTax, Converter={StaticResource Price}}" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
-                                        <Label Text="{svc:Translate Key=common.currency}" FontSize="11" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
-                                    </HorizontalStackLayout>
-                                    <Label IsVisible="{Binding HasSavings}" FontSize="11" TextColor="{StaticResource Gray400}"
-                                           TextDecorations="Strikethrough"
-                                           Text="{Binding RegularPriceInclTax, Converter={StaticResource Price}}" />
-                                </VerticalStackLayout>
-
-                                <Button Grid.Column="1" Text="+" FontSize="24" FontAttributes="Bold"
-                                        WidthRequest="46" HeightRequest="46" Padding="0" CornerRadius="23"
-                                        BackgroundColor="{StaticResource Primary}" TextColor="White" VerticalOptions="End"
+                                <Button Text="+" FontSize="22" FontAttributes="Bold"
+                                        WidthRequest="42" HeightRequest="42" Padding="0" CornerRadius="21"
+                                        BackgroundColor="{StaticResource Primary}" TextColor="White"
+                                        HorizontalOptions="End" VerticalOptions="End"
                                         Clicked="OnAddTapped"
                                         Command="{Binding Source={x:Reference Page}, Path=BindingContext.AddToCartCommand}"
                                         CommandParameter="{Binding .}" />
                             </Grid>
+
+                            <!-- الاسم: ارتفاع ثابت لسطرين -->
+                            <Label Grid.Row="1" Text="{Binding NameAr}" FontSize="13.5" FontAttributes="Bold"
+                                   TextColor="{StaticResource Gray900}" MaxLines="2" LineBreakMode="TailTruncation"
+                                   HeightRequest="38" VerticalTextAlignment="Start" />
+
+                            <!-- الوحدة -->
+                            <Label Grid.Row="2" Text="{Binding UnitSize}" FontSize="11" TextColor="{StaticResource Gray400}" />
+
+                            <!-- السعر مثبّت أسفل البطاقة (Row 4 بعد الفاصل المرن Row 3) -->
+                            <VerticalStackLayout Grid.Row="4" Spacing="0" VerticalOptions="End">
+                                <HorizontalStackLayout Spacing="3">
+                                    <Label Text="{Binding CheapestPriceInclTax, Converter={StaticResource Price}}" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
+                                    <Label Text="{svc:Translate Key=common.currency}" FontSize="11" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+                                <Label IsVisible="{Binding HasSavings}" FontSize="11" TextColor="{StaticResource Gray400}"
+                                       TextDecorations="Strikethrough"
+                                       Text="{Binding RegularPriceInclTax, Converter={StaticResource Price}}" />
+                            </VerticalStackLayout>
                         </Grid>
                     </Border>
                 </DataTemplate>
