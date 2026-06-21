@@ -20,18 +20,18 @@
             </CollectionView.EmptyView>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="m:ProductDto">
-                    <Border StrokeShape="RoundRectangle 16" StrokeThickness="1" Stroke="{StaticResource Gray200}" Padding="0">
-                        <Border.GestureRecognizers>
+                    <!-- البطاقة بلا إطار (شفافة)؛ الصورة وحدها داخل صندوق بخلفية رماديّة. -->
+                    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="3" BackgroundColor="Transparent">
+                        <Grid.GestureRecognizers>
                             <TapGestureRecognizer
                                 Command="{Binding Source={x:Reference Page}, Path=BindingContext.OpenProductCommand}"
                                 CommandParameter="{Binding .}" />
-                        </Border.GestureRecognizers>
-                        <!-- صفّ مرن (Row 3) يدفع السعر لأسفل البطاقة؛ ارتفاع الاسم ثابت لسطرين
-                             فتتحاذى كل البطاقات بصرف النظر عن طول الاسم. -->
-                        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Padding="10" RowSpacing="3">
+                        </Grid.GestureRecognizers>
 
-                            <!-- منطقة الصورة: صورة/رمز + شارة التوفير + زرّ الإضافة المتراكب -->
-                            <Grid Grid.Row="0" HeightRequest="120">
+                        <!-- صندوق الصورة: خلفية فاتحة + حواف مدوّرة -->
+                        <Border Grid.Row="0" StrokeThickness="0" BackgroundColor="{StaticResource Gray100}"
+                                StrokeShape="RoundRectangle 14" HeightRequest="140" Padding="12">
+                            <Grid>
                                 <Image Source="{Binding FullImageUrl}" Aspect="AspectFit" IsVisible="{Binding HasImage}" />
                                 <Label Text="{Binding Glyph}" FontSize="56" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding HasImage, Converter={StaticResource Invert}}" />
                                 <Border IsVisible="{Binding HasSavings}" BackgroundColor="#FFF3C4" Padding="6,2"
@@ -39,14 +39,17 @@
                                         HorizontalOptions="Start" VerticalOptions="Start">
                                     <Label Text="{Binding SavingsText}" FontSize="10" FontAttributes="Bold" TextColor="#9A6700" />
                                 </Border>
-                                <Button Text="+" FontSize="22" FontAttributes="Bold"
-                                        WidthRequest="42" HeightRequest="42" Padding="0" CornerRadius="21"
-                                        BackgroundColor="{StaticResource Primary}" TextColor="White"
-                                        HorizontalOptions="End" VerticalOptions="End"
-                                        Clicked="OnAddTapped"
-                                        Command="{Binding Source={x:Reference Page}, Path=BindingContext.AddToCartCommand}"
-                                        CommandParameter="{Binding .}" />
                             </Grid>
+                        </Border>
+
+                        <!-- زرّ الإضافة متراكب على زاوية صندوق الصورة -->
+                        <Button Grid.Row="0" Text="+" FontSize="22" FontAttributes="Bold"
+                                WidthRequest="42" HeightRequest="42" Padding="0" CornerRadius="21"
+                                BackgroundColor="{StaticResource Primary}" TextColor="White"
+                                HorizontalOptions="End" VerticalOptions="End" Margin="6"
+                                Clicked="OnAddTapped"
+                                Command="{Binding Source={x:Reference Page}, Path=BindingContext.AddToCartCommand}"
+                                CommandParameter="{Binding .}" />
 
                             <!-- الاسم: ارتفاع ثابت لسطرين -->
                             <Label Grid.Row="1" Text="{Binding NameAr}" FontSize="13.5" FontAttributes="Bold"
@@ -67,7 +70,6 @@
                                        Text="{Binding RegularPriceInclTax, Converter={StaticResource Price}}" />
                             </VerticalStackLayout>
                         </Grid>
-                    </Border>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
