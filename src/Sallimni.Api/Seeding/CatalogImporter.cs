@@ -94,6 +94,8 @@ public static class CatalogImporter
                 var priceStr = f[4].Trim();
                 var img = f[5].Trim();
                 var sku = NormalizeBarcode(f[6]);
+                var nameAr = f.Length > 7 ? f[7].Trim() : "";   // اسم عربي (إن وُجد بالملف)
+                var desc   = f.Length > 8 ? f[8].Trim() : "";   // وصف عربي (إن وُجد)
                 if (store.Length == 0 || name.Length == 0) continue;
 
                 // المتجر
@@ -126,7 +128,8 @@ public static class CatalogImporter
                     var tax = CategoryMap.TryGetValue(catCode, out var cm) ? cm.Tax : TaxClass.Sixteen;
                     product = new Product
                     {
-                        NameEn = name, NameAr = name,
+                        NameEn = name, NameAr = nameAr.Length > 0 ? nameAr : name,
+                        Description = desc.Length > 0 ? desc : null,
                         Barcode = sku.Length > 0 ? sku : null,
                         ImageUrl = img.Length > 0 ? img : null,
                         CategoryId = category.Id, TaxClass = tax, IsActive = true
