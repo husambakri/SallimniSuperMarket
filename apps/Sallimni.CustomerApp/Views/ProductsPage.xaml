@@ -32,7 +32,9 @@
                         <Border Grid.Row="0" StrokeThickness="0" BackgroundColor="{StaticResource Gray100}"
                                 StrokeShape="RoundRectangle 14" HeightRequest="140" Padding="12">
                             <Grid>
-                                <Image Source="{Binding FullImageUrl}" Aspect="AspectFit" IsVisible="{Binding HasImage}" />
+                                <Image Source="{Binding FullImageUrl}" Aspect="AspectFit" IsVisible="{Binding HasImage}"
+                                       WidthRequest="110" HeightRequest="110"
+                                       HorizontalOptions="Center" VerticalOptions="Center" />
                                 <Label Text="{Binding Glyph}" FontSize="56" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding HasImage, Converter={StaticResource Invert}}" />
                                 <Border IsVisible="{Binding HasSavings}" BackgroundColor="#FFF3C4" Padding="6,2"
                                         StrokeShape="RoundRectangle 8" StrokeThickness="0"
