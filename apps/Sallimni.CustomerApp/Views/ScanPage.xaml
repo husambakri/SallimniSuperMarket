@@ -22,29 +22,9 @@
             <!-- معاينة الكاميرا الحيّة — تظهر فقط أثناء المسح -->
             <Border IsVisible="{Binding IsScanning}" StrokeShape="RoundRectangle 16" StrokeThickness="2"
                     Stroke="{StaticResource Primary}" HeightRequest="300" Padding="0">
-                <Grid>
-                    <zxing:CameraBarcodeReaderView x:Name="Reader"
-                            IsDetecting="{Binding IsScanning}"
-                            BarcodesDetected="OnBarcodesDetected" />
-
-                    <!-- طبقة فوق الكاميرا (لا تلمس تدفّق الإطارات): نافذة مسح + خط أحمر متوهّج.
-                         العمود الأوسط 8* من 10 = عرض 80٪؛ InputTransparent يمرّر اللمس. -->
-                    <Grid ColumnDefinitions="*,8*,*" RowDefinitions="*,Auto,*" InputTransparent="True">
-                        <!-- إطار نافذة المسح (دليل بصري للمنتصف) -->
-                        <Border Grid.Column="1" Grid.Row="1" HeightRequest="130"
-                                Stroke="#80FFFFFF" StrokeThickness="1.5"
-                                StrokeShape="RoundRectangle 12" BackgroundColor="Transparent"
-                                InputTransparent="True" />
-                        <!-- الخط الأحمر: عرض 80٪، سماكة 3، أحمر شفاف قليلاً + توهّج -->
-                        <BoxView Grid.Column="1" Grid.Row="1" HeightRequest="3" CornerRadius="2"
-                                 Color="#E6FF2222" HorizontalOptions="Fill" VerticalOptions="Center"
-                                 InputTransparent="True">
-                            <BoxView.Shadow>
-                                <Shadow Brush="Red" Radius="12" Opacity="0.9" Offset="0,0" />
-                            </BoxView.Shadow>
-                        </BoxView>
-                    </Grid>
-                </Grid>
+                <zxing:CameraBarcodeReaderView x:Name="Reader"
+                        IsDetecting="{Binding IsScanning}"
+                        BarcodesDetected="OnBarcodesDetected" />
             </Border>
 
             <!-- إدخال يدوي بديل -->
