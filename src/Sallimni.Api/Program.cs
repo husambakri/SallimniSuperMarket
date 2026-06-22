@@ -15,6 +15,9 @@ builder.Services.AddSallimniInfrastructure(connectionString);
 // مُجمِّع متاجر البقالة الأردنية (مقارنة أسعار حيّة عند مسح الباركود — للتجربة).
 builder.Services.AddSingleton(new JordanGrocery.GroceryAggregator());
 
+// مهمّة خلفية تفهرس كتالوجات متاجر طلبات دوريًّا (تُقرأ من الفهرس وقت المسح).
+builder.Services.AddHostedService<Sallimni.Api.Services.TalabatIndexService>();
+
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 

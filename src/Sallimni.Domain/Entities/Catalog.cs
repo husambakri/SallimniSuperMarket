@@ -104,3 +104,21 @@ public class BarcodeScan : BaseEntity
     public Guid? ProductId { get; set; }
     public Guid? CustomerId { get; set; }
 }
+
+/// <summary>
+/// فهرس أسعار طلبات: صورة دوريّة لكتالوجات متاجر طلبات الأردنية (مقارنة السعر).
+/// تملؤها مهمّة خلفية كل بضع ساعات (مسح + استخراج باركود من sku)، ويقرأها فحص
+/// السعر الحيّ فورًا بالباركود دون ضرب طلبات وقت الطلب.
+/// </summary>
+public class TalabatPriceEntry : BaseEntity
+{
+    public string BranchId   { get; set; } = string.Empty;
+    public string StoreName  { get; set; } = string.Empty;
+    public string Barcode    { get; set; } = string.Empty;
+    public string Name       { get; set; } = string.Empty;
+    public decimal Price     { get; set; }   // السعر الأصلي
+    public decimal Special   { get; set; }   // سعر التخفيض (0 = لا يوجد)
+    public bool InStock      { get; set; }
+    public string ImageUrl   { get; set; } = string.Empty;
+    public string ProductUrl { get; set; } = string.Empty;
+}

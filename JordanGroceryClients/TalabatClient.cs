@@ -40,8 +40,11 @@ public class TalabatClient : IGroceryStoreClient
     private const string BaseUrl     = "https://www.talabat.com";
     private const string CountrySlug = "jordan";
 
-    // عدد الطلبات المتزامنة الكلّي عبر كل فروع طلبات (يمنع حظر Cloudflare عند تعدّد الفروع).
-    private static readonly SemaphoreSlim _globalGate = new(8);
+    // عدد الطلبات المتزامنة الكلّي عبر كل فروع طلبات (منخفض عمدًا لتفادي 429 من Cloudflare).
+    private static readonly SemaphoreSlim _globalGate = new(3);
+    // مهلة تهدئة بعد كل طلب، وتراجع أطول عند 429.
+    private static readonly TimeSpan PaceDelay      = TimeSpan.FromMilliseconds(200);
+    private static readonly TimeSpan RateLimitDelay = TimeSpan.FromSeconds(8);
     // مهلة بحث الفرع الواحد — لا يحجب بطء/حظر فرعٍ بقيّةَ المتاجر.
     private static readonly TimeSpan PerLookupBudget = TimeSpan.FromSeconds(6);
     // تزامن داخلي لكل فرع عند مسح الفئات.
@@ -227,6 +230,94 @@ public class TalabatClient : IGroceryStoreClient
     {
         if (string.IsNullOrWhiteSpace(name)) return Task.FromResult<ProductInfo?>(null);
         return ScanAsync(i => i.Title?.Contains(name, StringComparison.OrdinalIgnoreCase) == true);
+    }
+
+    /// <summary>هل يُرجع هذا الفرع/المنطقة كتالوجًا؟ (فحص خفيف لاكتشاف المنطقة الصحيحة).</summary>
+    public async Task<bool> HasCatalogAsync(CancellationToken ct = default)
+    {
+        try { return (await GetCategoryPairsAsync(ct)).Count > 0; }
+        catch { return false; }
+    }
+
+    /// <summary>
+    /// يُعدّد كل منتجات المتجر (كل الفئات وكل الصفحات) — للفهرسة الدوريّة.
+    /// مُتسلسل ومُهدّأ لتقليل الضغط؛ يُرجع منتجات ذات باركود فقط، بلا تكرار.
+    /// </summary>
+    public async Task<List<ProductInfo>> GetAllProductsAsync(CancellationToken ct = default)
+    {
+        var pairs = await GetCategoryPairsAsync(ct);
+        var byBarcode = new System.Collections.Concurrent.ConcurrentDictionary<string, ProductInfo>();
+
+        // الأقسام بالتوازي؛ التزامن الكلّي محدود ببوّابة _globalGate داخل GetItemsPageAsync.
+        // كل قسم معزول: فشله (شبكة/حظر) لا يُسقط بقيّة الأقسام — نجمع ما توفّر.
+        var tasks = pairs.Select(async pair =>
+        {
+            try
+            {
+                int page = 1, pageCount = 1;
+                do
+                {
+                    if (ct.IsCancellationRequested) return;
+                    var (items, pc) = await GetItemsPageAsync(pair.Cat, pair.Sub, page, ct);
+                    pageCount = pc;
+                    foreach (var it in items)
+                    {
+                        var p = ToProductInfo(it);
+                        if (p.Barcode.Length >= 8) byBarcode.TryAdd(p.Barcode, p);
+                    }
+                    page++;
+                } while (page <= pageCount && !ct.IsCancellationRequested);
+            }
+            catch { /* قسم واحد فشل — تجاهل وواصل */ }
+        });
+
+        await Task.WhenAll(tasks);
+        return byBarcode.Values.ToList();
+    }
+
+    /// <summary>
+    /// يجلب صفحة عناصر مع عدد الصفحات الكلّي (للترقيم في الفهرسة).
+    /// يتعامل مع 429/403 بهدوء (تراجع + إرجاع فارغ) بدل رمي استثناء يُسقط المسح كلّه.
+    /// </summary>
+    private async Task<(List<TlbItem> Items, int PageCount)> GetItemsPageAsync(
+        string catSlug, string subSlug, int page, CancellationToken ct)
+    {
+        string body;
+        await _globalGate.WaitAsync(ct);
+        try
+        {
+            var url = ItemsManifestUrl(catSlug, subSlug) + (page > 1 ? $"&page={page}" : "");
+            using var resp = await _http.GetAsync(url, ct);
+
+            if (resp.StatusCode == (System.Net.HttpStatusCode)429 ||
+                resp.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await Task.Delay(RateLimitDelay, ct); // تراجع عند الحظر
+                return ([], 1);
+            }
+            if (!resp.IsSuccessStatusCode) return ([], 1);
+
+            body = await resp.Content.ReadAsStringAsync(ct);
+            await Task.Delay(PaceDelay, ct); // تهدئة بين الطلبات
+        }
+        finally { _globalGate.Release(); }
+
+        if (body.TrimStart().StartsWith('<')) return ([], 1);
+
+        using var doc = JsonDocument.Parse(body);
+        if (!doc.RootElement.TryGetProperty("pageProps", out var pp) ||
+            !pp.TryGetProperty("initialState", out var state) ||
+            !state.TryGetProperty("itemsData", out var data))
+            return ([], 1);
+
+        var pc = data.TryGetProperty("pageCount", out var pcEl) && pcEl.ValueKind == JsonValueKind.Number
+            ? pcEl.GetInt32() : 1;
+        var items = data.TryGetProperty("items", out var itemsEl)
+            ? JsonSerializer.Deserialize<List<TlbItem>>(
+                itemsEl.GetRawText(),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? []
+            : [];
+        return (items, pc);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

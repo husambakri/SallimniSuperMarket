@@ -5,31 +5,9 @@ namespace JordanGrocery;
 
 public class GroceryAggregator
 {
-    // المتاجر التي تدعم البحث بالباركود مباشرة
+    // المتاجر التي تدعم البحث بالباركود مباشرة وحيًّا.
+    // (متاجر طلبات تُفهرَس دوريًّا في جدول TalabatPriceIndex وتُقرأ من هناك، لا حيًّا.)
     private readonly List<IGroceryStoreClient> _regularStores;
-    // متاجر طلبات — لا تكشف الباركود، تُستخدم GetByNameAsync كـ fallback
-    private readonly List<TalabatClient> _talabatStores;
-
-    /// <summary>
-    /// Known Talabat Jordan grocery stores.
-    /// Add more stores here as they are discovered.
-    /// Each entry: (storeName, branchId, branchSlug, areaId)
-    ///
-    /// To find a store's branchId and branchSlug, navigate to the store on
-    /// talabat.com — they appear in the URL:
-    ///   talabat.com/jordan/grocery/{branchId}/{branchSlug}?aid={areaId}
-    ///
-    /// Area IDs for common Jordan areas:
-    ///   4809 = Al Mala'ab (Irbid)
-    ///   ↑ Use the ?aid= value from any store URL in that area.
-    /// </summary>
-    // فرع واحد لكل سلسلة (كل أفرع السلسلة بنفس السعر) — كل المتاجر مُبقاة.
-    private static readonly (string Name, string BranchId, string BranchSlug, int AreaId)[] TalabatStores =
-    [
-        ("Talabat — Hypermax",  "698392", "store",                 4809), // ✅ 27 فئة
-        ("Talabat — Carrefour", "600928", "carrefour-al-swaifyeh", 4914), // ⚠️ يُرجع 0 فئة حالياً — يلزم معرّف فرع صالح
-        ("Talabat — Safeway",   "49320",  "safeway-al-sahel",      4941), // ✅ 27 فئة
-    ];
 
     public GroceryAggregator(
         string martooKey    = "",
@@ -47,22 +25,12 @@ public class GroceryAggregator
             new SamehMallClient(),       // سامح مول       — ⚠️ متوقف
             new DookantiClient(),        // دكانتي         — ⚠️ متوقف
         };
-
-        // متاجر طلبات — تُبحث بالباركود عبر حقل sku ("{id}_{barcode}")
-        _talabatStores = TalabatStores
-            .Select(t => new TalabatClient(t.Name, t.BranchId, t.BranchSlug, t.AreaId))
-            .ToList();
     }
 
-    /// <summary>
-    /// ابحث في جميع المتاجر بالباركود بالتوازي. طلبات يطابق عبر حقل sku
-    /// (دقيق ولا يعتمد على لغة الاسم)، فيظهر حتى لو لم يجده أي متجر آخر.
-    /// </summary>
+    /// <summary>ابحث في متاجر الباركود الحيّة بالتوازي (طلبات تُقرأ من الفهرس منفصلةً).</summary>
     public async Task<List<ProductInfo>> SearchAllAsync(string barcode)
     {
-        var allStores = _regularStores.Concat(_talabatStores.Cast<IGroceryStoreClient>());
-
-        var tasks = allStores.Select(async store =>
+        var tasks = _regularStores.Select(async store =>
         {
             try
             {
@@ -91,7 +59,7 @@ public class GroceryAggregator
     }
 
     public IReadOnlyList<string> StoreNames =>
-        [.. _regularStores.Select(s => s.StoreName), .. _talabatStores.Select(s => s.StoreName)];
+        _regularStores.Select(s => s.StoreName).ToList();
 
     /// <summary>
     /// امسح الباركود في جميع المتاجر ثم قارن الأسعار:

@@ -28,6 +28,16 @@ public class ProductConfig : IEntityTypeConfiguration<Product>
     }
 }
 
+public class TalabatPriceEntryConfig : IEntityTypeConfiguration<TalabatPriceEntry>
+{
+    public void Configure(EntityTypeBuilder<TalabatPriceEntry> b)
+    {
+        // البحث بالباركود مفهرس؛ والربط (فرع + باركود) فريد للتحديث الدوري (upsert).
+        b.HasIndex(e => e.Barcode);
+        b.HasIndex(e => new { e.BranchId, e.Barcode }).IsUnique();
+    }
+}
+
 public class MerchantProductConfig : IEntityTypeConfiguration<MerchantProduct>
 {
     public void Configure(EntityTypeBuilder<MerchantProduct> b)
