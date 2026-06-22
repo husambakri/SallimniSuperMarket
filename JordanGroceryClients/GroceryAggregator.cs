@@ -20,9 +20,6 @@ public class GroceryAggregator
             new CozmoClient(),           // كوزمو          — HTML Scraper ✅
             new CentroMarketClient(),                  // سنترو ماركت    — Custom REST API ✅
             new MartooClient(martooKey, martooSecret), // مارتو — WooCommerce ✅
-            new CarrefourJordanClient(), // كارفور الأردن  — ⚠️ متوقف
-            new SamehMallClient(),       // سامح مول       — ⚠️ متوقف
-            new DookantiClient(),        // دكانتي         — ⚠️ متوقف
         };
     }
 
