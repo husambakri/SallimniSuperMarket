@@ -19,7 +19,6 @@ public static class TalabatDiscovery
 
     private static readonly TimeSpan PaceDelay      = TimeSpan.FromMilliseconds(150);
     private static readonly TimeSpan RateLimitDelay = TimeSpan.FromSeconds(8);
-    private const int DiscoveryConcurrency = 3;
 
     private static HttpClient NewClient()
     {
@@ -42,8 +41,13 @@ public static class TalabatDiscovery
     /// <summary>متجر مكتشَف: معرّف الفرع + الاسم + معرّف المنطقة (aid) لفتح كتالوجه.</summary>
     public readonly record struct DiscoveredStore(string BranchId, string Name, int AreaId);
 
+    /// <summary>
+    /// يكتشف متاجر المدينة. تسلسليّ وبهدوء (طلب واحد في كل مرة) لتفادي 429،
+    /// ويتوقّف مبكرًا بعد جمع <paramref name="maxAreas"/> منطقة من المدينة
+    /// (تكفي لتغطية معظم المتاجر بعد التوحيد بالاسم)، أو بعد فحص سقفٍ من المناطق.
+    /// </summary>
     public static async Task<List<DiscoveredStore>> DiscoverCityStoresAsync(
-        string citySlug, CancellationToken ct = default)
+        string citySlug, int maxAreas = 15, int maxScan = 160, CancellationToken ct = default)
     {
         using var http = NewClient();
 
@@ -51,27 +55,23 @@ public static class TalabatDiscovery
         if (areaPaths.Count == 0) return [];
 
         var byName = new Dictionary<string, DiscoveredStore>(StringComparer.OrdinalIgnoreCase);
-        var gate = new SemaphoreSlim(DiscoveryConcurrency);
+        int cityAreas = 0, scanned = 0;
 
-        var tasks = areaPaths.Select(async path =>
+        foreach (var path in areaPaths)
         {
+            if (ct.IsCancellationRequested || cityAreas >= maxAreas || scanned >= maxScan) break;
+            scanned++;
             try
             {
-                await gate.WaitAsync(ct);
-                try
-                {
-                    var (city, areaId, vendors) = await FetchAreaAsync(http, path, ct);
-                    if (!string.Equals(city, citySlug, StringComparison.OrdinalIgnoreCase)) return;
-                    lock (byName)
-                        foreach (var (id, name) in vendors)
-                            byName.TryAdd(NormalizeName(name), new DiscoveredStore(id, name, areaId));
-                }
-                finally { gate.Release(); }
+                var (city, areaId, vendors) = await FetchAreaAsync(http, path, ct);
+                if (!string.Equals(city, citySlug, StringComparison.OrdinalIgnoreCase)) continue;
+                cityAreas++;
+                foreach (var (id, name) in vendors)
+                    byName.TryAdd(NormalizeName(name), new DiscoveredStore(id, name, areaId));
             }
-            catch { /* منطقة واحدة فشلت — تجاهل */ }
-        });
+            catch { /* منطقة واحدة فشلت — تجاهل وواصل */ }
+        }
 
-        try { await Task.WhenAll(tasks); } catch { }
         return byName.Values.ToList();
     }
 

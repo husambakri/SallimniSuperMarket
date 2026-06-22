@@ -25,6 +25,7 @@ public class TalabatIndexService : BackgroundService
     private const int MaxStores = 120;
 
     private static readonly TimeSpan Interval      = TimeSpan.FromHours(6);
+    private static readonly TimeSpan RetryOnError  = TimeSpan.FromMinutes(20); // عند الفشل: أعد بسرعة لا بعد 6 ساعات
     private static readonly TimeSpan StartupDelay  = TimeSpan.FromSeconds(45);
     private static readonly TimeSpan BetweenStores = TimeSpan.FromSeconds(2);
 
@@ -40,18 +41,23 @@ public class TalabatIndexService : BackgroundService
 
         while (!ct.IsCancellationRequested)
         {
+            var next = Interval;
             try { await RefreshAsync(ct); }
             catch (OperationCanceledException) { return; }
-            catch (Exception ex) { _logger.LogError(ex, "[TalabatIndex] فشل دورة الفهرسة"); }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[TalabatIndex] فشل دورة الفهرسة — إعادة بعد {Min} دقيقة", RetryOnError.TotalMinutes);
+                next = RetryOnError;
+            }
 
-            try { await Task.Delay(Interval, ct); } catch { return; }
+            try { await Task.Delay(next, ct); } catch { return; }
         }
     }
 
     private async Task RefreshAsync(CancellationToken ct)
     {
         _logger.LogInformation("[TalabatIndex] اكتشاف متاجر «{City}» من طلبات…", CitySlug);
-        var discovered = await TalabatDiscovery.DiscoverCityStoresAsync(CitySlug, ct);
+        var discovered = await TalabatDiscovery.DiscoverCityStoresAsync(CitySlug, ct: ct);
 
         var stores = discovered.Take(MaxStores).ToList();
         _logger.LogInformation("[TalabatIndex] اكتُشف {Found} متجرًا (موحّدة بالاسم){Cap}؛ بدء الفهرسة…",
