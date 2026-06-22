@@ -1,70 +1,17 @@
 // ===================================================
-// كارفور الأردن — MAF/Hybris Platform
-// API: https://www.carrefourjordan.com/api/v7/
+// كارفور الأردن — ⚠️ متوقف مؤقتاً
+// www.carrefourjordan.com لا يستجيب (DNS/API متوقف)
+// TODO: أعد تفعيله عند عودة الموقع
 // ===================================================
-using System.Text.Json;
 namespace JordanGrocery;
 
 public class CarrefourJordanClient : IGroceryStoreClient
 {
     public string StoreName => "Carrefour Jordan";
-    private readonly HttpClient _http;
-    private const string BaseUrl = "https://www.carrefourjordan.com";
 
-    public CarrefourJordanClient()
-    {
-        _http = new HttpClient();
-        _http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-        _http.DefaultRequestHeaders.Add("Accept", "application/json");
-    }
+    public Task<ProductInfo?> GetByBarcodeAsync(string barcode)
+        => Task.FromResult<ProductInfo?>(null);
 
-    public async Task<ProductInfo?> GetByBarcodeAsync(string barcode)
-    {
-        var url = $"{BaseUrl}/api/v7/products?query={Uri.EscapeDataString(barcode)}&lang=en&currentPage=0&pageSize=5&sortBy=relevance&displayCurr=JOD";
-        using var resp = await _http.GetAsync(url);
-        if (!resp.IsSuccessStatusCode) return null;
-
-        using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-        var products = doc.RootElement.GetPropertyOrNull("products")?.GetPropertyOrNull("products");
-        if (products is null || products.Value.GetArrayLength() == 0) return null;
-
-        var p = products.Value[0];
-        return ParseProduct(p);
-    }
-
-    public async Task<ProductInfo?> GetByProductIdAsync(string productId)
-    {
-        var url = $"{BaseUrl}/api/v7/products/{productId}?lang=en&displayCurr=JOD";
-        using var resp = await _http.GetAsync(url);
-        if (!resp.IsSuccessStatusCode) return null;
-
-        using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-        return ParseProduct(doc.RootElement);
-    }
-
-    private ProductInfo? ParseProduct(JsonElement p)
-    {
-        var id   = p.GetString("code") ?? "";
-        var name = p.GetString("name") ?? "";
-        var price  = p.GetPropertyOrNull("price")?.GetDecimal("value") ?? 0;
-        var wasPrice = p.GetPropertyOrNull("wasPrice")?.GetDecimal("value") ?? 0;
-        var inStock = p.GetPropertyOrNull("stock")?.GetString("stockLevelStatus") == "inStock";
-        var img = p.GetPropertyOrNull("images")?.GetArrayLength() > 0
-            ? (p.GetProperty("images")[0].GetString("url") ?? "") : "";
-        if (img.StartsWith("//")) img = "https:" + img;
-        var barcode = p.GetString("ean") ?? p.GetString("code") ?? "";
-
-        return new ProductInfo(
-            Store       : StoreName,
-            ProductId   : id,
-            Barcode     : barcode,
-            Name        : name,
-            Price       : price,
-            Special     : wasPrice > price ? price : 0,
-            InStock     : inStock,
-            StockStatus : inStock ? "In Stock" : "Out Of Stock",
-            ImageUrl    : img,
-            ProductUrl  : $"{BaseUrl}/mafjor/en/p/{id}"
-        );
-    }
+    public Task<ProductInfo?> GetByProductIdAsync(string productId)
+        => Task.FromResult<ProductInfo?>(null);
 }

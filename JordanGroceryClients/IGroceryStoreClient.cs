@@ -21,4 +21,10 @@ public interface IGroceryStoreClient
     string StoreName { get; }
     Task<ProductInfo?> GetByBarcodeAsync(string barcode);
     Task<ProductInfo?> GetByProductIdAsync(string productId);
+
+    /// <summary>
+    /// البحث بالاسم (اختياري — يُستخدم عند عدم توفر الباركود مثل طلبات).
+    /// القيمة الافتراضية: null (المتاجر التي لا تدعمه تتجاهله).
+    /// </summary>
+    Task<ProductInfo?> GetByNameAsync(string name) => Task.FromResult<ProductInfo?>(null);
 }

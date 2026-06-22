@@ -24,22 +24,19 @@ public class LiveScanController : ControllerBase
         barcode = (barcode ?? "").Trim();
         if (barcode.Length == 0) return BadRequest(new { error = "باركود فارغ." });
 
-        // حدّ زمني إجمالي ~20ث حتى لا تتعلّق الاستجابة على متجر بطيء.
-        var search = _agg.SearchAllAsync(barcode);
-        var done = await Task.WhenAny(search, Task.Delay(TimeSpan.FromSeconds(12), ct));
+        // حدّ زمني إجمالي ~12ث حتى لا تتعلّق الاستجابة على متجر بطيء.
+        var scan = _agg.ScanCompareAsync(barcode);
+        var done = await Task.WhenAny(scan, Task.Delay(TimeSpan.FromSeconds(12), ct));
 
         var stores = _agg.StoreNames.Count;
-        if (done != search)
+        if (done != scan)
             return Ok(new { barcode, timedOut = true, storesQueried = stores, count = 0, results = Array.Empty<LiveScanResult>() });
 
-        var results = (await search)
-            .Select(p =>
-            {
-                var eff = p.Special > 0 ? p.Special : p.Price;
-                return new LiveScanResult(p.Store, p.Name, p.Price, p.Special, eff,
-                    p.InStock, p.StockStatus, p.ImageUrl, p.ProductUrl);
-            })
-            .OrderBy(r => r.EffectivePrice)
+        // العروض مرتّبة أصلاً تصاعديًا بالسعر الفعلي من ScanCompareAsync.
+        var comparison = await scan;
+        var results = comparison.Offers
+            .Select(o => new LiveScanResult(o.Store, o.Name, o.Price, o.Special, o.EffectivePrice,
+                o.InStock, o.StockStatus, o.ImageUrl, o.ProductUrl))
             .ToList();
 
         return Ok(new { barcode, timedOut = false, storesQueried = stores, count = results.Count, results });
