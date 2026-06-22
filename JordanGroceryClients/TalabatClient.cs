@@ -208,9 +208,16 @@ public class TalabatClient : IGroceryStoreClient
 
     // ─── Public API ───────────────────────────────────────────────────────────
 
-    /// <summary>Talabat لا يكشف الباركود في واجهته العامة — يُبحث بالاسم.</summary>
-    public Task<ProductInfo?> GetByBarcodeAsync(string barcode) =>
-        Task.FromResult<ProductInfo?>(null);
+    /// <summary>
+    /// يبحث بالباركود عبر حقل sku في طلبات — صيغته "{رقم داخلي}_{باركود EAN}"
+    /// (مثل "727803_6253357600056")، فالجزء بعد الشرطة السفلية هو الباركود.
+    /// دقيق ولا يعتمد على لغة الاسم.
+    /// </summary>
+    public Task<ProductInfo?> GetByBarcodeAsync(string barcode)
+    {
+        if (string.IsNullOrWhiteSpace(barcode)) return Task.FromResult<ProductInfo?>(null);
+        return ScanAsync(i => BarcodeOf(i) == barcode);
+    }
 
     public Task<ProductInfo?> GetByProductIdAsync(string productId) =>
         ScanAsync(i => i.Id == productId);
@@ -235,7 +242,7 @@ public class TalabatClient : IGroceryStoreClient
         return new ProductInfo(
             Store:       StoreName,
             ProductId:   item.Id ?? string.Empty,
-            Barcode:     ExtractBarcode(item.Image), // اسم ملف الصورة غالباً هو الباركود
+            Barcode:     BarcodeOf(item),
             Name:        item.Title ?? string.Empty,
             Price:       regularPrice,
             Special:     special,
@@ -246,12 +253,24 @@ public class TalabatClient : IGroceryStoreClient
         );
     }
 
-    /// <summary>يستخرج باركود EAN من اسم ملف صورة طلبات (مثل .../6253357600056.jpg) إن وُجد.</summary>
-    private static string ExtractBarcode(string? imageUrl)
+    /// <summary>
+    /// باركود المنتج: أولاً من sku ("{id}_{barcode}" → الجزء بعد '_')، وإلا من اسم
+    /// ملف الصورة (مثل .../6253357600056.jpg).
+    /// </summary>
+    private static string BarcodeOf(TlbItem item)
     {
-        if (string.IsNullOrEmpty(imageUrl)) return string.Empty;
-        var m = Regex.Match(imageUrl, @"/(\d{8,14})\.(?:jpg|jpeg|png|webp)", RegexOptions.IgnoreCase);
-        return m.Success ? m.Groups[1].Value : string.Empty;
+        if (!string.IsNullOrEmpty(item.Sku))
+        {
+            var idx = item.Sku.LastIndexOf('_');
+            var bc  = idx >= 0 ? item.Sku[(idx + 1)..] : item.Sku;
+            if (Regex.IsMatch(bc, @"^\d{8,14}$")) return bc;
+        }
+        if (!string.IsNullOrEmpty(item.Image))
+        {
+            var m = Regex.Match(item.Image, @"/(\d{8,14})\.(?:jpg|jpeg|png|webp)", RegexOptions.IgnoreCase);
+            if (m.Success) return m.Groups[1].Value;
+        }
+        return string.Empty;
     }
 
     // ─── DTOs ─────────────────────────────────────────────────────────────────
@@ -259,6 +278,7 @@ public class TalabatClient : IGroceryStoreClient
     private sealed record TlbItem(
         [property: JsonPropertyName("id")]            string? Id,
         [property: JsonPropertyName("title")]         string? Title,
+        [property: JsonPropertyName("sku")]           string? Sku,
         [property: JsonPropertyName("price")]         double  Price,
         [property: JsonPropertyName("originalPrice")] double  OriginalPrice,
         [property: JsonPropertyName("image")]         string? Image,

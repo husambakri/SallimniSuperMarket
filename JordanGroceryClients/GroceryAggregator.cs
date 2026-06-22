@@ -23,32 +23,12 @@ public class GroceryAggregator
     ///   4809 = Al Mala'ab (Irbid)
     ///   ↑ Use the ?aid= value from any store URL in that area.
     /// </summary>
+    // فرع واحد لكل سلسلة (كل أفرع السلسلة بنفس السعر) — كل المتاجر مُبقاة.
     private static readonly (string Name, string BranchId, string BranchSlug, int AreaId)[] TalabatStores =
     [
-        // ── Hypermax (Carrefour rebranded) ─────────────────────────────────────
-        ("Talabat — Hypermax City Center",   "698392", "store", 4809),
-        ("Talabat — Hypermax Branch 388",    "698388", "store", 4914),
-        ("Talabat — Hypermax Branch 389",    "698389", "store", 4914),
-        ("Talabat — Hypermax Branch 390",    "698390", "store", 4914),
-        ("Talabat — Hypermax Branch 391",    "698391", "store", 4914),
-        ("Talabat — Hypermax Branch 393",    "698393", "store", 4914),
-        ("Talabat — Hypermax Branch 394",    "698394", "store", 4914),
-        ("Talabat — Hypermax Branch 395",    "698395", "store", 4914),
-        ("Talabat — Hypermax Branch 396",    "698396", "store", 4914),
-        ("Talabat — Hypermax Branch 397",    "698397", "store", 4914),
-
-        // ── Carrefour (still shown as Carrefour in Talabat system) ─────────────
-        ("Talabat — Carrefour Swaifyeh",     "600928", "carrefour-al-swaifyeh", 4914),
-
-        // ── Safeway ────────────────────────────────────────────────────────────
-        ("Talabat — Safeway Al Sahel",       "49320",  "safeway-al-sahel",      4941),
-        ("Talabat — Safeway Branch 321",     "49321",  "store",                 4914),
-        ("Talabat — Safeway Branch 322",     "49322",  "store",                 4914),
-        ("Talabat — Safeway Muqabalain",     "49323",  "safeway-al-muqabalain", 6636),
-        ("Talabat — Safeway Branch 324",     "49324",  "store",                 4914),
-        ("Talabat — Safeway Branch 325",     "49325",  "store",                 4914),
-        ("Talabat — Safeway Branch 326",     "49326",  "store",                 4914),
-        ("Talabat — Safeway Branch 327",     "49327",  "store",                 4914),
+        ("Talabat — Hypermax",  "698392", "store",                 4809), // ✅ 27 فئة
+        ("Talabat — Carrefour", "600928", "carrefour-al-swaifyeh", 4914), // ⚠️ يُرجع 0 فئة حالياً — يلزم معرّف فرع صالح
+        ("Talabat — Safeway",   "49320",  "safeway-al-sahel",      4941), // ✅ 27 فئة
     ];
 
     public GroceryAggregator(
@@ -68,27 +48,26 @@ public class GroceryAggregator
             new DookantiClient(),        // دكانتي         — ⚠️ متوقف
         };
 
-        // متاجر طلبات — تُبحث بالاسم (لا تكشف الباركود)
+        // متاجر طلبات — تُبحث بالباركود عبر حقل sku ("{id}_{barcode}")
         _talabatStores = TalabatStores
             .Select(t => new TalabatClient(t.Name, t.BranchId, t.BranchSlug, t.AreaId))
             .ToList();
     }
 
     /// <summary>
-    /// ابحث في جميع المتاجر بالتوازي.
-    /// المتاجر العادية: بحث بالباركود.
-    /// متاجر طلبات: بحث بالاسم (fallback) باستخدام أول اسم منتج وُجد في المتاجر العادية.
+    /// ابحث في جميع المتاجر بالباركود بالتوازي. طلبات يطابق عبر حقل sku
+    /// (دقيق ولا يعتمد على لغة الاسم)، فيظهر حتى لو لم يجده أي متجر آخر.
     /// </summary>
     public async Task<List<ProductInfo>> SearchAllAsync(string barcode)
     {
-        // ── المرحلة 1: ابحث في المتاجر العادية بالباركود بالتوازي ──────────
-        var regularTasks = _regularStores.Select(async store =>
+        var allStores = _regularStores.Concat(_talabatStores.Cast<IGroceryStoreClient>());
+
+        var tasks = allStores.Select(async store =>
         {
             try
             {
                 var result = await store.GetByBarcodeAsync(barcode);
-                var status = result is not null ? "✅ وُجد" : "➖ غير موجود";
-                Console.WriteLine($"  {store.StoreName,-30} {status}");
+                Console.WriteLine($"  {store.StoreName,-30} {(result is not null ? "✅ وُجد" : "➖ غير موجود")}");
                 return result;
             }
             catch (Exception ex)
@@ -98,51 +77,8 @@ public class GroceryAggregator
             }
         });
 
-        var regularResults = (await Task.WhenAll(regularTasks))
-            .Where(r => r is not null).Cast<ProductInfo>().ToList();
-
-        // ── المرحلة 2: ابحث في طلبات بالاسم إن وُجد المنتج في متجر آخر ──
-        // نأخذ أقصر اسم منتج (عادةً اسم المنتج الإنجليزي أوضح للمطابقة)
-        var productName = regularResults
-            .Where(r => !string.IsNullOrWhiteSpace(r.Name))
-            .OrderBy(r => r.Name.Length)
-            .FirstOrDefault()?.Name;
-
-        List<ProductInfo> talabatResults = [];
-
-        if (!string.IsNullOrEmpty(productName))
-        {
-            // استخرج أول كلمتين فقط للبحث (تقليل الضوضاء)
-            var searchTerm = string.Join(" ", productName.Split(' ').Take(2));
-            Console.WriteLine($"\n  طلبات: بحث بالاسم «{searchTerm}»");
-
-            var talabatTasks = _talabatStores.Select(async store =>
-            {
-                try
-                {
-                    var result = await store.GetByNameAsync(searchTerm);
-                    var status = result is not null ? "✅ وُجد" : "➖ غير موجود";
-                    Console.WriteLine($"  {store.StoreName,-30} {status}");
-                    return result;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"  {store.StoreName,-30} ❌ خطأ: {ex.Message}");
-                    return (ProductInfo?)null;
-                }
-            });
-
-            talabatResults = (await Task.WhenAll(talabatTasks))
-                .Where(r => r is not null).Cast<ProductInfo>().ToList();
-        }
-        else
-        {
-            // المنتج غير موجود في أي متجر عادي — أبلغ فقط
-            foreach (var store in _talabatStores)
-                Console.WriteLine($"  {store.StoreName,-30} ➖ تخطى (لا اسم للبحث)");
-        }
-
-        return [.. regularResults, .. talabatResults];
+        var results = await Task.WhenAll(tasks);
+        return results.Where(r => r is not null).Cast<ProductInfo>().ToList();
     }
 
     /// <summary>ابحث في متجر واحد بالاسم</summary>
