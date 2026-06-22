@@ -8,16 +8,21 @@ namespace JordanGrocery;
 /// <summary>
 /// Client for a single Talabat Jordan grocery store.
 ///
-/// Talabat is a Next.js SSR app. All store products are embedded in the
-/// initial page HTML inside a <script id="__NEXT_DATA__"> tag, under:
-///   pageProps.initialMenuState.menuData.items
+/// Talabat is a Next.js SSR app. The store page embeds the category tree in
+/// <c>__NEXT_DATA__</c> under <c>props.pageProps.initialState.categories</c>
+/// (each category has <c>subCategories</c> with slugs). Products are NOT in the
+/// initial HTML — they load per sub-category from the BFF manifest:
+///   /_next/data/manifests/grocery-items.json?...&amp;categorySlug=..&amp;subCategorySlug=..
+/// which returns <c>pageProps.initialState.itemsData.items</c>.
 ///
-/// Each item: { id, name, description, price, oldPrice, image, ... }
-/// NOTE: Talabat does NOT expose EAN barcodes in their public web API.
-///       GetByBarcodeAsync searches by name (case-insensitive contains).
-///       GetByProductIdAsync searches by Talabat's internal numeric item ID.
+/// NOTE: Talabat does NOT expose EAN barcodes, so <see cref="GetByBarcodeAsync"/>
+/// returns null. The aggregator looks Talabat up by name (the product name found
+/// in the barcode-capable stores) via <see cref="GetByNameAsync"/>.
 ///
-/// Required cookies: tlb_country, tlb_area (JSON), tlb_vertical.
+/// A process-wide concurrency gate caps total simultaneous Talabat requests
+/// across ALL branch instances, so fanning out over many branches does not trip
+/// Cloudflare. Each lookup is also bounded by an internal timeout so a slow or
+/// blocked branch never stalls the overall scan.
 /// </summary>
 public class TalabatClient : IGroceryStoreClient
 {
@@ -25,7 +30,7 @@ public class TalabatClient : IGroceryStoreClient
 
     private readonly string _branchId;
     private readonly string _branchSlug;
-    private readonly int _areaId;
+    private readonly int    _areaId;
     private readonly string _areaName;
     private readonly string _areaSlug;
     private readonly double _areaLat;
@@ -34,6 +39,13 @@ public class TalabatClient : IGroceryStoreClient
 
     private const string BaseUrl     = "https://www.talabat.com";
     private const string CountrySlug = "jordan";
+
+    // عدد الطلبات المتزامنة الكلّي عبر كل فروع طلبات (يمنع حظر Cloudflare عند تعدّد الفروع).
+    private static readonly SemaphoreSlim _globalGate = new(8);
+    // مهلة بحث الفرع الواحد — لا يحجب بطء/حظر فرعٍ بقيّةَ المتاجر.
+    private static readonly TimeSpan PerLookupBudget = TimeSpan.FromSeconds(6);
+    // تزامن داخلي لكل فرع عند مسح الفئات.
+    private const int PerBranchConcurrency = 3;
 
     public TalabatClient(
         string storeName,
@@ -55,16 +67,15 @@ public class TalabatClient : IGroceryStoreClient
         _areaLng     = areaLng;
 
         var handler = new HttpClientHandler { CookieContainer = BuildCookies(), AllowAutoRedirect = true };
-        _http = new HttpClient(handler) { BaseAddress = new Uri(BaseUrl) };
+        _http = new HttpClient(handler) { BaseAddress = new Uri(BaseUrl), Timeout = TimeSpan.FromSeconds(10) };
         _http.DefaultRequestHeaders.Add("User-Agent",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
-        _http.DefaultRequestHeaders.Add("Accept",
-            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        _http.DefaultRequestHeaders.Add("Accept", "text/html,application/json,*/*");
         _http.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
     }
 
-    // ─── Cookie setup ─────────────────────────────────────────────────────────
+    // ─── Cookie setup ───────────────────────────────────────────────────────────
 
     private CookieContainer BuildCookies()
     {
@@ -79,132 +90,177 @@ public class TalabatClient : IGroceryStoreClient
 
         var jar = new CookieContainer();
         var uri = new Uri(BaseUrl);
-        jar.Add(uri, new Cookie("tlb_country",   CountrySlug));
-        jar.Add(uri, new Cookie("tlb_area",      Uri.EscapeDataString(areaJson)));
-        jar.Add(uri, new Cookie("tlb_vertical",  "1"));
-        jar.Add(uri, new Cookie("next-i18next",  "en"));
+        jar.Add(uri, new Cookie("tlb_country",  CountrySlug));
+        jar.Add(uri, new Cookie("tlb_area",     Uri.EscapeDataString(areaJson)));
+        jar.Add(uri, new Cookie("tlb_vertical", "1"));
+        jar.Add(uri, new Cookie("next-i18next", "en"));
         return jar;
     }
 
-    // ─── Fetch + parse ────────────────────────────────────────────────────────
+    // ─── URL builders ─────────────────────────────────────────────────────────
 
     private string StorePageUrl =>
         $"/{CountrySlug}/grocery/{_branchId}/{_branchSlug}?aid={_areaId}";
 
-    /// <summary>
-    /// Fetches the store HTML page and extracts all items from __NEXT_DATA__.
-    /// Returns an empty list if the page is blocked or data is unavailable.
-    /// </summary>
-    private async Task<List<TlbItem>> GetItemsAsync()
+    private string ItemsManifestUrl(string categorySlug, string subCategorySlug) =>
+        $"/_next/data/manifests/grocery-items.json" +
+        $"?aid={_areaId}&countrySlug={CountrySlug}&vertical=grocery" +
+        $"&branchId={_branchId}&branchSlug={_branchSlug}" +
+        $"&categorySlug={categorySlug}&subCategorySlug={subCategorySlug}";
+
+    // ─── Fetch + parse ──────────────────────────────────────────────────────────
+
+    /// <summary>Fetches the (category, subCategory) slug pairs from the store page.</summary>
+    private async Task<List<(string Cat, string Sub)>> GetCategoryPairsAsync(CancellationToken ct)
     {
-        try
-        {
-            using var resp = await _http.GetAsync(StorePageUrl);
-            if (!resp.IsSuccessStatusCode)
-            {
-                Console.WriteLine($"    [Talabat:{_branchId}] HTTP {(int)resp.StatusCode}");
-                return [];
-            }
+        await _globalGate.WaitAsync(ct);
+        string html;
+        try { html = await _http.GetStringAsync(StorePageUrl, ct); }
+        finally { _globalGate.Release(); }
 
-            var html = await resp.Content.ReadAsStringAsync();
+        var match = Regex.Match(html,
+            @"<script[^>]+id=""__NEXT_DATA__""[^>]*>\s*(\{.*?\})\s*</script>",
+            RegexOptions.Singleline);
+        if (!match.Success) return [];
 
-            // Extract <script id="__NEXT_DATA__" ...>{...}</script>
-            var match = Regex.Match(html,
-                @"<script[^>]+id=""__NEXT_DATA__""[^>]*>\s*(\{.*?\})\s*</script>",
-                RegexOptions.Singleline);
-            if (!match.Success)
-            {
-                Console.WriteLine($"    [Talabat:{_branchId}] __NEXT_DATA__ غير موجود (HTML: {html.Length} حرف)");
-                return [];
-            }
-
-            using var doc = JsonDocument.Parse(match.Groups[1].Value);
-            var root = doc.RootElement;
-
-            // Navigate: props → pageProps → initialMenuState → menuData → items
-            if (!root.TryGetProperty("props", out var props)) { Console.WriteLine($"    [Talabat:{_branchId}] ❌ props"); return []; }
-            if (!props.TryGetProperty("pageProps", out var pp)) { Console.WriteLine($"    [Talabat:{_branchId}] ❌ pageProps"); return []; }
-            if (!pp.TryGetProperty("initialMenuState", out var ims)) { Console.WriteLine($"    [Talabat:{_branchId}] ❌ initialMenuState"); return []; }
-            if (!ims.TryGetProperty("menuData", out var menuData)) { Console.WriteLine($"    [Talabat:{_branchId}] ❌ menuData"); return []; }
-            if (!menuData.TryGetProperty("items", out var itemsEl)) { Console.WriteLine($"    [Talabat:{_branchId}] ❌ items"); return []; }
-
-            var items = JsonSerializer.Deserialize<List<TlbItem>>(
-                itemsEl.GetRawText(),
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            Console.WriteLine($"    [Talabat:{_branchId}] ✅ {items?.Count ?? 0} منتج");
-            return items ?? [];
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"    [Talabat:{_branchId}] ❌ استثناء: {ex.Message}");
+        using var doc = JsonDocument.Parse(match.Groups[1].Value);
+        if (!doc.RootElement.TryGetProperty("props", out var props) ||
+            !props.TryGetProperty("pageProps", out var pp) ||
+            !pp.TryGetProperty("initialState", out var state) ||
+            !state.TryGetProperty("categories", out var cats) ||
+            cats.ValueKind != JsonValueKind.Array)
             return [];
+
+        var pairs = new List<(string, string)>();
+        foreach (var c in cats.EnumerateArray())
+        {
+            var catSlug = c.GetString("slug");
+            if (catSlug is null) continue;
+            if (c.TryGetProperty("subCategories", out var subs) && subs.ValueKind == JsonValueKind.Array)
+                foreach (var s in subs.EnumerateArray())
+                    if (s.GetString("slug") is { } subSlug)
+                        pairs.Add((catSlug, subSlug));
         }
+        return pairs;
+    }
+
+    /// <summary>Fetches one sub-category's items (page 1) from the BFF manifest.</summary>
+    private async Task<List<TlbItem>> GetItemsAsync(string catSlug, string subSlug, CancellationToken ct)
+    {
+        await _globalGate.WaitAsync(ct);
+        string body;
+        try { body = await _http.GetStringAsync(ItemsManifestUrl(catSlug, subSlug), ct); }
+        finally { _globalGate.Release(); }
+
+        if (body.TrimStart().StartsWith('<')) return []; // Cloudflare/HTML
+
+        using var doc = JsonDocument.Parse(body);
+        if (!doc.RootElement.TryGetProperty("pageProps", out var pp) ||
+            !pp.TryGetProperty("initialState", out var state) ||
+            !state.TryGetProperty("itemsData", out var data) ||
+            !data.TryGetProperty("items", out var itemsEl))
+            return [];
+
+        return JsonSerializer.Deserialize<List<TlbItem>>(
+            itemsEl.GetRawText(),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+    }
+
+    /// <summary>
+    /// Scans sub-categories with bounded concurrency, returning the first item
+    /// matching <paramref name="predicate"/>. Bounded by <see cref="PerLookupBudget"/>.
+    /// </summary>
+    private async Task<ProductInfo?> ScanAsync(Func<TlbItem, bool> predicate)
+    {
+        using var cts = new CancellationTokenSource(PerLookupBudget);
+        var ct = cts.Token;
+
+        List<(string Cat, string Sub)> pairs;
+        try { pairs = await GetCategoryPairsAsync(ct); }
+        catch { return null; }
+        if (pairs.Count == 0) return null;
+
+        var sem = new SemaphoreSlim(PerBranchConcurrency);
+        ProductInfo? result = null;
+
+        var tasks = pairs.Select(async pair =>
+        {
+            if (ct.IsCancellationRequested) return;
+            try { await sem.WaitAsync(ct); } catch { return; }
+            try
+            {
+                if (ct.IsCancellationRequested) return;
+                var items = await GetItemsAsync(pair.Cat, pair.Sub, ct);
+                var hit = items.FirstOrDefault(predicate);
+                if (hit is not null)
+                {
+                    Interlocked.CompareExchange(ref result, ToProductInfo(hit), null);
+                    cts.Cancel(); // وقف بقيّة المسح عند أول تطابق
+                }
+            }
+            catch { /* خطأ شبكة/إلغاء على فئة — تخطَّ */ }
+            finally { sem.Release(); }
+        });
+
+        try { await Task.WhenAll(tasks); } catch { }
+        return result;
     }
 
     // ─── Public API ───────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Talabat does not expose barcodes in its web API.
-    /// This always returns null — use standalone store clients for barcode lookup.
-    /// </summary>
+    /// <summary>Talabat لا يكشف الباركود في واجهته العامة — يُبحث بالاسم.</summary>
     public Task<ProductInfo?> GetByBarcodeAsync(string barcode) =>
         Task.FromResult<ProductInfo?>(null);
 
-    /// <summary>
-    /// Looks up a product by Talabat's internal numeric item ID.
-    /// </summary>
-    public async Task<ProductInfo?> GetByProductIdAsync(string productId)
-    {
-        var items = await GetItemsAsync();
-        var item  = items.FirstOrDefault(i => i.Id.ToString() == productId);
-        return item is null ? null : ToProductInfo(item);
-    }
+    public Task<ProductInfo?> GetByProductIdAsync(string productId) =>
+        ScanAsync(i => i.Id == productId);
 
-    /// <summary>
-    /// Searches all items by name (case-insensitive contains match).
-    /// Useful when you already know the product name.
-    /// </summary>
-    public async Task<ProductInfo?> GetByNameAsync(string name)
+    /// <summary>يبحث بالاسم (تطابق جزئي غير حسّاس لحالة الأحرف على عنوان المنتج).</summary>
+    public Task<ProductInfo?> GetByNameAsync(string name)
     {
-        var items = await GetItemsAsync();
-        var item  = items.FirstOrDefault(i =>
-            i.Name?.Contains(name, StringComparison.OrdinalIgnoreCase) == true);
-        return item is null ? null : ToProductInfo(item);
+        if (string.IsNullOrWhiteSpace(name)) return Task.FromResult<ProductInfo?>(null);
+        return ScanAsync(i => i.Title?.Contains(name, StringComparison.OrdinalIgnoreCase) == true);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private ProductInfo ToProductInfo(TlbItem item)
     {
-        var inStock = true; // Talabat only shows in-stock items in the catalog
-        var price   = (decimal)item.Price;
-        var special = item.OldPrice > 0 && item.OldPrice > item.Price
-            ? price           // price is already the discounted price
-            : 0m;
-        var regularPrice = item.OldPrice > 0 ? (decimal)item.OldPrice : price;
+        var price        = (decimal)item.Price;
+        var regularPrice = item.OriginalPrice > 0 ? (decimal)item.OriginalPrice : price;
+        // price هو السعر بعد الخصم؛ نعتبره Special إن كان أقل من السعر الأصلي.
+        var special      = regularPrice > price ? price : 0m;
+        var inStock      = item.StockAmount > 0;
 
         return new ProductInfo(
             Store:       StoreName,
-            ProductId:   item.Id.ToString(),
-            Barcode:     string.Empty,          // not available from Talabat's web API
-            Name:        item.Name ?? string.Empty,
+            ProductId:   item.Id ?? string.Empty,
+            Barcode:     ExtractBarcode(item.Image), // اسم ملف الصورة غالباً هو الباركود
+            Name:        item.Title ?? string.Empty,
             Price:       regularPrice,
             Special:     special,
             InStock:     inStock,
-            StockStatus: "In Stock",
+            StockStatus: inStock ? "In Stock" : "Out Of Stock",
             ImageUrl:    item.Image ?? string.Empty,
             ProductUrl:  $"{BaseUrl}/{CountrySlug}/grocery/{_branchId}/{_branchSlug}?aid={_areaId}"
         );
     }
 
+    /// <summary>يستخرج باركود EAN من اسم ملف صورة طلبات (مثل .../6253357600056.jpg) إن وُجد.</summary>
+    private static string ExtractBarcode(string? imageUrl)
+    {
+        if (string.IsNullOrEmpty(imageUrl)) return string.Empty;
+        var m = Regex.Match(imageUrl, @"/(\d{8,14})\.(?:jpg|jpeg|png|webp)", RegexOptions.IgnoreCase);
+        return m.Success ? m.Groups[1].Value : string.Empty;
+    }
+
     // ─── DTOs ─────────────────────────────────────────────────────────────────
 
     private sealed record TlbItem(
-        [property: JsonPropertyName("id")]          long    Id,
-        [property: JsonPropertyName("name")]        string? Name,
-        [property: JsonPropertyName("description")] string? Description,
-        [property: JsonPropertyName("price")]       double  Price,
-        [property: JsonPropertyName("oldPrice")]    double  OldPrice,
-        [property: JsonPropertyName("image")]       string? Image);
+        [property: JsonPropertyName("id")]            string? Id,
+        [property: JsonPropertyName("title")]         string? Title,
+        [property: JsonPropertyName("price")]         double  Price,
+        [property: JsonPropertyName("originalPrice")] double  OriginalPrice,
+        [property: JsonPropertyName("image")]         string? Image,
+        [property: JsonPropertyName("stockAmount")]   int     StockAmount);
 }
