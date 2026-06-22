@@ -28,3 +28,12 @@ public interface IGroceryStoreClient
     /// </summary>
     Task<ProductInfo?> GetByNameAsync(string name) => Task.FromResult<ProductInfo?>(null);
 }
+
+/// <summary>
+/// قدرة اختيارية: متجر يستطيع تعداد كامل كتالوجه (لسحبه وتخزينه محليًّا).
+/// تُنفّذها المتاجر التي لها واجهة تسرد كل المنتجات (مثل ياسر مول OpenCart).
+/// </summary>
+public interface ICatalogStoreClient : IGroceryStoreClient
+{
+    Task<List<ProductInfo>> GetAllProductsAsync(CancellationToken ct = default);
+}

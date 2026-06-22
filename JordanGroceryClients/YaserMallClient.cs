@@ -14,7 +14,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 namespace JordanGrocery;
 
-public class YaserMallClient : IGroceryStoreClient
+public class YaserMallClient : ICatalogStoreClient
 {
     public string StoreName => "Yaser Mall";
 
@@ -66,6 +66,58 @@ public class YaserMallClient : IGroceryStoreClient
         }
 
         return null;
+    }
+
+    // ── سحب كامل الكتالوج ──────────────────────────────────────────────
+    // productSearch ببحث فارغ يسرد كل المنتجات (مرقّمة) لكن دون الباركود؛
+    // نجلب الباركود لكل منتج عبر getProduct (بتزامن محدود).
+    public async Task<List<ProductInfo>> GetAllProductsAsync(CancellationToken ct = default)
+    {
+        var result = new List<ProductInfo>();
+        var seen = new HashSet<string>();
+
+        for (int page = 1; !ct.IsCancellationRequested; page++)
+        {
+            var listUrl = $"{BaseApi}?route=api/wkrestapi/catalog/productSearch" +
+                          $"&search=&page={page}&limit=100&width=200";
+
+            List<string> ids;
+            try
+            {
+                using var resp = await _http.GetAsync(listUrl, ct);
+                if (!resp.IsSuccessStatusCode) break;
+                var body = await resp.Content.ReadAsStringAsync(ct);
+                if (body.TrimStart().StartsWith('<')) break;
+
+                using var doc = JsonDocument.Parse(body);
+                var products = doc.RootElement.GetPropertyOrNull("products");
+                if (products is null) break;
+
+                ids = products.Value.EnumerateArray()
+                    .Select(p => p.GetString("product_id"))
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Select(id => id!)
+                    .ToList();
+            }
+            catch { break; }
+
+            if (ids.Count == 0) break; // انتهت الصفحات
+
+            // اجلب تفاصيل كل منتج (الباركود) بتزامن محدود.
+            var sem = new SemaphoreSlim(8);
+            var tasks = ids.Select(async id =>
+            {
+                await sem.WaitAsync(ct);
+                try { return await GetByProductIdAsync(id); }
+                catch { return null; }
+                finally { sem.Release(); }
+            });
+            foreach (var info in await Task.WhenAll(tasks))
+                if (info is not null && info.Barcode.Length >= 8 && seen.Add(info.Barcode))
+                    result.Add(info);
+        }
+
+        return result;
     }
 
     // ── جلب منتج بالـ ID ───────────────────────────────────────────────

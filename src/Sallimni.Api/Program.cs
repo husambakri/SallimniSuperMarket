@@ -18,6 +18,9 @@ builder.Services.AddSingleton(new JordanGrocery.GroceryAggregator());
 // مهمّة خلفية تفهرس كتالوجات متاجر طلبات دوريًّا (تُقرأ من الفهرس وقت المسح).
 builder.Services.AddHostedService<Sallimni.Api.Services.TalabatIndexService>();
 
+// مهمّة خلفية تسحب كامل كتالوجات المتاجر المستقلّة (ياسر مول…) إلى الفهرس.
+builder.Services.AddHostedService<Sallimni.Api.Services.StoreCatalogIndexService>();
+
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 

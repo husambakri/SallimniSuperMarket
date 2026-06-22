@@ -15,7 +15,7 @@ public class GroceryAggregator
     {
         _regularStores = new List<IGroceryStoreClient>
         {
-            new YaserMallClient(),       // ياسر مول      — OpenCart productSearch ✅
+            // ياسر مول: يُسحب كتالوجه كاملًا في الفهرس (StoreCatalogIndexService)، فلا يُبحث حيًّا هنا.
             new CTownClient(),           // C-Town        — Magento 2 GraphQL ✅
             new HypermaxClient(),        // هايبرماكس       — MAF Next.js API ✅
             new CozmoClient(),           // كوزمو          — HTML Scraper ✅
