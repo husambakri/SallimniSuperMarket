@@ -7,7 +7,7 @@ using System.Text;
 using System.Text.Json;
 namespace JordanGrocery;
 
-public class CTownClient : IGroceryStoreClient
+public class CTownClient : ICatalogStoreClient
 {
     public string StoreName => "C-Town";
 
@@ -49,6 +49,53 @@ public class CTownClient : IGroceryStoreClient
     // ── البحث بالـ ID ───────────────────────────────────────────────────
     public Task<ProductInfo?> GetByProductIdAsync(string productId)
         => QueryGraphQL(BuildIdQuery(productId));
+
+    // ── سحب كامل الكتالوج ──────────────────────────────────────────────
+    // قائمة Magento ترجع SKU (الباركود) مباشرةً، فلا حاجة لنداء لكل منتج.
+    // فلتر price.from=0 يطابق كل المنتجات؛ نُرقّم حتى تفرغ الصفحات.
+    public async Task<List<ProductInfo>> GetAllProductsAsync(CancellationToken ct = default)
+    {
+        var result = new List<ProductInfo>();
+        var seen = new HashSet<string>();
+
+        for (int page = 1; page <= 1000 && !ct.IsCancellationRequested; page++)
+        {
+            var query =
+                "{ products(filter: {price: {from: \"0\"}}, pageSize: 100, currentPage: " + page + ") { items { " +
+                "id sku name url_key stock_status " +
+                "price_range { minimum_price { regular_price { value } final_price { value } discount { amount_off } } } " +
+                "small_image { url } } } }";
+
+            JsonElement.ArrayEnumerator items;
+            JsonDocument? doc = null;
+            try
+            {
+                var payload = JsonSerializer.Serialize(new { query });
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var resp = await _http.PostAsync(GraphQlUrl, content, ct);
+                if (!resp.IsSuccessStatusCode) break;
+                var body = await resp.Content.ReadAsStringAsync(ct);
+                if (body.TrimStart().StartsWith('<')) break;
+
+                doc = JsonDocument.Parse(body);
+                var itemsEl = doc.RootElement.GetPropertyOrNull("data")?
+                    .GetPropertyOrNull("products")?.GetPropertyOrNull("items");
+                if (itemsEl is null || itemsEl.Value.GetArrayLength() == 0) { doc.Dispose(); break; }
+                items = itemsEl.Value.EnumerateArray();
+            }
+            catch { doc?.Dispose(); break; }
+
+            foreach (var it in items)
+            {
+                var info = ParseProduct(it);
+                if (info.Barcode.Length >= 8 && seen.Add(info.Barcode))
+                    result.Add(info);
+            }
+            doc.Dispose();
+        }
+
+        return result;
+    }
 
     // ── تنفيذ GraphQL query ─────────────────────────────────────────────
     private async Task<ProductInfo?> QueryGraphQL(string query)

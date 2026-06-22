@@ -15,8 +15,7 @@ public class GroceryAggregator
     {
         _regularStores = new List<IGroceryStoreClient>
         {
-            // ياسر مول: يُسحب كتالوجه كاملًا في الفهرس (StoreCatalogIndexService)، فلا يُبحث حيًّا هنا.
-            new CTownClient(),           // C-Town        — Magento 2 GraphQL ✅
+            // ياسر مول و C-Town: يُسحب كتالوجهما كاملًا في الفهرس (StoreCatalogIndexService)، فلا يُبحثان حيًّا هنا.
             new HypermaxClient(),        // هايبرماكس       — MAF Next.js API ✅
             new CozmoClient(),           // كوزمو          — HTML Scraper ✅
             new CentroMarketClient(),                  // سنترو ماركت    — Custom REST API ✅

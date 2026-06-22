@@ -24,6 +24,7 @@ public class StoreCatalogIndexService : BackgroundService
     private static readonly Func<ICatalogStoreClient>[] Stores =
     {
         () => new YaserMallClient(),
+        () => new CTownClient(),
     };
 
     public StoreCatalogIndexService(IServiceScopeFactory scopeFactory, ILogger<StoreCatalogIndexService> logger)
