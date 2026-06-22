@@ -69,7 +69,7 @@ public class TalabatIndexService : BackgroundService
             ct.ThrowIfCancellationRequested();
             try
             {
-                var client = new TalabatClient(store.Name, store.BranchId, "store", store.AreaId);
+                var client = new TalabatClient(store.Name, store.BranchId, store.Slug, store.AreaId);
                 var products = await client.GetAllProductsAsync(ct);
                 await UpsertBranchAsync(store.BranchId, store.Name, products, ct);
                 okStores++;

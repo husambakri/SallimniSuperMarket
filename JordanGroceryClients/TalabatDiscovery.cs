@@ -38,8 +38,8 @@ public static class TalabatDiscovery
         return http;
     }
 
-    /// <summary>متجر مكتشَف: معرّف الفرع + الاسم + معرّف المنطقة (aid) لفتح كتالوجه.</summary>
-    public readonly record struct DiscoveredStore(string BranchId, string Name, int AreaId);
+    /// <summary>متجر مكتشَف: معرّف الفرع + الاسم + الـslug + معرّف المنطقة (aid) لفتح كتالوجه.</summary>
+    public readonly record struct DiscoveredStore(string BranchId, string Name, string Slug, int AreaId);
 
     /// <summary>
     /// يكتشف متاجر المدينة. تسلسليّ وبهدوء (طلب واحد في كل مرة) لتفادي 429،
@@ -63,11 +63,11 @@ public static class TalabatDiscovery
             scanned++;
             try
             {
-                var (city, areaId, vendors) = await FetchAreaAsync(http, path, ct);
+                var (city, vendors) = await FetchAreaAsync(http, path, ct);
                 if (!string.Equals(city, citySlug, StringComparison.OrdinalIgnoreCase)) continue;
                 cityAreas++;
-                foreach (var (id, name) in vendors)
-                    byName.TryAdd(NormalizeName(name), new DiscoveredStore(id, name, areaId));
+                foreach (var v in vendors)
+                    byName.TryAdd(NormalizeName(v.Name), v);
             }
             catch { /* منطقة واحدة فشلت — تجاهل وواصل */ }
         }
@@ -99,52 +99,61 @@ public static class TalabatDiscovery
             .ToList();
     }
 
-    private static async Task<(string? City, int AreaId, List<(string Id, string Name)> Vendors)> FetchAreaAsync(
+    private static async Task<(string? City, List<DiscoveredStore> Vendors)> FetchAreaAsync(
         HttpClient http, string path, CancellationToken ct)
     {
         using var resp = await http.GetAsync(path, ct);
         if (resp.StatusCode == (HttpStatusCode)429 || resp.StatusCode == HttpStatusCode.Forbidden)
         {
             await Task.Delay(RateLimitDelay, ct);
-            return (null, 0, []);
+            return (null, []);
         }
-        if (!resp.IsSuccessStatusCode) return (null, 0, []);
+        if (!resp.IsSuccessStatusCode) return (null, []);
 
         var html = await resp.Content.ReadAsStringAsync(ct);
         await Task.Delay(PaceDelay, ct);
 
         var m = Regex.Match(html, @"<script[^>]+id=""__NEXT_DATA__""[^>]*>(.*?)</script>", RegexOptions.Singleline);
-        if (!m.Success) return (null, 0, []);
+        if (!m.Success) return (null, []);
 
         using var doc = JsonDocument.Parse(m.Groups[1].Value);
         if (!doc.RootElement.TryGetProperty("props", out var props) ||
             !props.TryGetProperty("pageProps", out var pp))
-            return (null, 0, []);
+            return (null, []);
 
         string? city = null;
-        int areaId = 0;
-        if (pp.TryGetProperty("metadata", out var md))
-        {
-            if (md.TryGetProperty("city", out var c) && c.TryGetProperty("slug", out var cs))
-                city = cs.GetString();
-            if (md.TryGetProperty("area", out var a) && a.TryGetProperty("id", out var aid) &&
-                aid.ValueKind == JsonValueKind.Number)
-                areaId = aid.GetInt32();
-        }
+        if (pp.TryGetProperty("metadata", out var md) &&
+            md.TryGetProperty("city", out var c) && c.TryGetProperty("slug", out var cs))
+            city = cs.GetString();
 
-        var vendors = new List<(string, string)>();
+        var vendors = new List<DiscoveredStore>();
         if (pp.TryGetProperty("vendors", out var vs) && vs.ValueKind == JsonValueKind.Array)
         {
             foreach (var v in vs.EnumerateArray())
             {
-                string? id = v.TryGetProperty("id", out var idEl)
-                    ? (idEl.ValueKind == JsonValueKind.Number ? idEl.GetInt64().ToString() : idEl.GetString())
-                    : null;
-                var nm = v.TryGetProperty("name", out var nEl) ? nEl.GetString() : null;
-                if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(nm))
-                    vendors.Add((id!, nm!));
+                // متاجر البقالة فقط.
+                if (!(v.TryGetProperty("isGrocery", out var ig) && ig.ValueKind == JsonValueKind.True)) continue;
+
+                var name = v.TryGetProperty("name", out var nEl) ? nEl.GetString() : null;
+                if (string.IsNullOrEmpty(name)) continue;
+
+                // معرّف الفرع الحقيقي من menuUrl: /jordan/restaurant/{branchId}/{slug}
+                var menuUrl = v.TryGetProperty("menuUrl", out var mu) ? mu.GetString() : null;
+                if (string.IsNullOrEmpty(menuUrl)) continue;
+                var bm = Regex.Match(menuUrl, @"/(\d+)/([^/?#]+)");
+                if (!bm.Success) continue;
+                var branchId = bm.Groups[1].Value;
+                var slug = v.TryGetProperty("branchSlug", out var bsEl) && !string.IsNullOrEmpty(bsEl.GetString())
+                    ? bsEl.GetString()! : bm.Groups[2].Value;
+
+                // منطقة المتجر (aid) لفتح كتالوجه.
+                var aid = v.TryGetProperty("shopArea", out var sa) && sa.ValueKind == JsonValueKind.Number
+                    ? sa.GetInt32() : 0;
+                if (aid == 0) continue;
+
+                vendors.Add(new DiscoveredStore(branchId, name!, slug, aid));
             }
         }
-        return (city, areaId, vendors);
+        return (city, vendors);
     }
 }
