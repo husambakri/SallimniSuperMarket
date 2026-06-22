@@ -61,6 +61,7 @@ public class GroceryAggregator
             new CTownClient(),           // C-Town        — Magento 2 GraphQL ✅
             new HypermaxClient(),        // هايبرماكس       — MAF Next.js API ✅
             new CozmoClient(),           // كوزمو          — HTML Scraper ✅
+            new CentroMarketClient(),                  // سنترو ماركت    — Custom REST API ✅
             new MartooClient(martooKey, martooSecret), // مارتو — WooCommerce ✅
             new CarrefourJordanClient(), // كارفور الأردن  — ⚠️ متوقف
             new SamehMallClient(),       // سامح مول       — ⚠️ متوقف
