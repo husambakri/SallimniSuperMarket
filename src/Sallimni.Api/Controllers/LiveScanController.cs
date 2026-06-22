@@ -61,6 +61,31 @@ public class LiveScanController : ControllerBase
         return Ok(new { barcode, timedOut = liveTimedOut, storesQueried, count = results.Count, results });
     }
 
+    /// <summary>حالة فهرسة متاجر طلبات: كم متجر، كم منتج، وآخر تحديث لكل متجر (لمتابعة التقدّم).</summary>
+    [HttpGet("status")]
+    public async Task<IActionResult> Status(CancellationToken ct)
+    {
+        var perStore = await _db.TalabatPriceIndex
+            .GroupBy(e => new { e.BranchId, e.StoreName })
+            .Select(g => new
+            {
+                store       = g.Key.StoreName,
+                branchId    = g.Key.BranchId,
+                products    = g.Count(),
+                lastUpdated = g.Max(x => x.UpdatedAt),
+            })
+            .OrderByDescending(x => x.lastUpdated)
+            .ToListAsync(ct);
+
+        return Ok(new
+        {
+            storesIndexed = perStore.Count,
+            totalProducts = perStore.Sum(x => x.products),
+            lastUpdated   = perStore.Count > 0 ? perStore.Max(x => x.lastUpdated) : null,
+            stores        = perStore,
+        });
+    }
+
     private static LiveScanResult ToResult(string store, string name, decimal price, decimal special,
         bool inStock, string stockStatus, string imageUrl, string productUrl)
     {
