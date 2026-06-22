@@ -42,12 +42,11 @@ public static class TalabatDiscovery
     public readonly record struct DiscoveredStore(string BranchId, string Name, string Slug, int AreaId);
 
     /// <summary>
-    /// يكتشف متاجر المدينة. تسلسليّ وبهدوء (طلب واحد في كل مرة) لتفادي 429،
-    /// ويتوقّف مبكرًا بعد جمع <paramref name="maxAreas"/> منطقة من المدينة
-    /// (تكفي لتغطية معظم المتاجر بعد التوحيد بالاسم)، أو بعد فحص سقفٍ من المناطق.
+    /// يكتشف كل متاجر المدينة (يمسح جميع مناطق البقالة دون توقّف مبكر). تسلسليّ
+    /// وبهدوء (طلب واحد في كل مرة) لتفادي 429. يوحّد المتاجر بالاسم.
     /// </summary>
     public static async Task<List<DiscoveredStore>> DiscoverCityStoresAsync(
-        string citySlug, int maxAreas = 15, int maxScan = 160, CancellationToken ct = default)
+        string citySlug, CancellationToken ct = default)
     {
         using var http = NewClient();
 
@@ -55,17 +54,14 @@ public static class TalabatDiscovery
         if (areaPaths.Count == 0) return [];
 
         var byName = new Dictionary<string, DiscoveredStore>(StringComparer.OrdinalIgnoreCase);
-        int cityAreas = 0, scanned = 0;
 
         foreach (var path in areaPaths)
         {
-            if (ct.IsCancellationRequested || cityAreas >= maxAreas || scanned >= maxScan) break;
-            scanned++;
+            if (ct.IsCancellationRequested) break;
             try
             {
                 var (city, vendors) = await FetchAreaAsync(http, path, ct);
                 if (!string.Equals(city, citySlug, StringComparison.OrdinalIgnoreCase)) continue;
-                cityAreas++;
                 foreach (var v in vendors)
                     byName.TryAdd(NormalizeName(v.Name), v);
             }

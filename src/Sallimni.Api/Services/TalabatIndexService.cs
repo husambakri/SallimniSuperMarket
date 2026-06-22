@@ -21,10 +21,8 @@ public class TalabatIndexService : BackgroundService
 
     // المدينة المستهدفة (slug كما في طلبات). قابلة للتوسعة لاحقًا لعدّة مدن.
     private const string CitySlug = "amman";
-    // سقف أمان لعدد المتاجر المفهرَسة في الدورة (يمنع حملاً مفرطًا/حظرًا).
-    private const int MaxStores = 120;
 
-    private static readonly TimeSpan Interval        = TimeSpan.FromHours(6);
+    private static readonly TimeSpan Interval        = TimeSpan.FromHours(24);
     private static readonly TimeSpan RetryOnError    = TimeSpan.FromMinutes(20); // عند الفشل: أعد بسرعة لا بعد 6 ساعات
     private static readonly TimeSpan StartupDelay    = TimeSpan.FromSeconds(45);
     private static readonly TimeSpan BetweenStores   = TimeSpan.FromSeconds(2);
@@ -58,11 +56,8 @@ public class TalabatIndexService : BackgroundService
     private async Task RefreshAsync(CancellationToken ct)
     {
         _logger.LogInformation("[TalabatIndex] اكتشاف متاجر «{City}» من طلبات…", CitySlug);
-        var discovered = await TalabatDiscovery.DiscoverCityStoresAsync(CitySlug, ct: ct);
-
-        var stores = discovered.Take(MaxStores).ToList();
-        _logger.LogInformation("[TalabatIndex] اكتُشف {Found} متجرًا (موحّدة بالاسم){Cap}؛ بدء الفهرسة…",
-            discovered.Count, discovered.Count > MaxStores ? $" — يُفهرَس أوّل {MaxStores}" : "");
+        var stores = await TalabatDiscovery.DiscoverCityStoresAsync(CitySlug, ct);
+        _logger.LogInformation("[TalabatIndex] اكتُشف {Found} متجرًا (موحّدة بالاسم)؛ بدء فهرسة الجميع…", stores.Count);
 
         int okStores = 0, totalRows = 0;
         foreach (var store in stores)
@@ -99,12 +94,12 @@ public class TalabatIndexService : BackgroundService
         await PurgeStaleAsync(ct);
     }
 
-    /// <summary>يحذف صفوف فروعٍ لم تُحدَّث منذ &gt;25 ساعة (متاجر لم تعد تُكتشف/مدينة قديمة).</summary>
+    /// <summary>يحذف صفوف فروعٍ لم تُحدَّث منذ &gt;50 ساعة (دورتان يوميّتان) — متاجر لم تعد تُكتشف.</summary>
     private async Task PurgeStaleAsync(CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SallimniDbContext>();
-        var cutoff = DateTimeOffset.UtcNow - TimeSpan.FromHours(25);
+        var cutoff = DateTimeOffset.UtcNow - TimeSpan.FromHours(50);
         var stale = await db.TalabatPriceIndex.Where(e => e.UpdatedAt < cutoff).ToListAsync(ct);
         if (stale.Count == 0) return;
         db.TalabatPriceIndex.RemoveRange(stale);
