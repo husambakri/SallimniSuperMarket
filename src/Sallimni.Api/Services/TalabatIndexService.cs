@@ -24,10 +24,11 @@ public class TalabatIndexService : BackgroundService
     // سقف أمان لعدد المتاجر المفهرَسة في الدورة (يمنع حملاً مفرطًا/حظرًا).
     private const int MaxStores = 120;
 
-    private static readonly TimeSpan Interval      = TimeSpan.FromHours(6);
-    private static readonly TimeSpan RetryOnError  = TimeSpan.FromMinutes(20); // عند الفشل: أعد بسرعة لا بعد 6 ساعات
-    private static readonly TimeSpan StartupDelay  = TimeSpan.FromSeconds(45);
-    private static readonly TimeSpan BetweenStores = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan Interval        = TimeSpan.FromHours(6);
+    private static readonly TimeSpan RetryOnError    = TimeSpan.FromMinutes(20); // عند الفشل: أعد بسرعة لا بعد 6 ساعات
+    private static readonly TimeSpan StartupDelay    = TimeSpan.FromSeconds(45);
+    private static readonly TimeSpan BetweenStores   = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan PerStoreTimeout = TimeSpan.FromMinutes(3);  // متجر بطيء/محجوب يُتخطّى ولا يُجمّد الباقي
 
     public TalabatIndexService(IServiceScopeFactory scopeFactory, ILogger<TalabatIndexService> logger)
     {
@@ -69,14 +70,22 @@ public class TalabatIndexService : BackgroundService
             ct.ThrowIfCancellationRequested();
             try
             {
+                // حدّ زمني لكل متجر: متجر بطيء/محجوب يُتخطّى بدل تجميد الدورة كلها.
+                using var storeCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                storeCts.CancelAfter(PerStoreTimeout);
+
                 var client = new TalabatClient(store.Name, store.BranchId, store.Slug, store.AreaId);
-                var products = await client.GetAllProductsAsync(ct);
+                var products = await client.GetAllProductsAsync(storeCts.Token);
                 await UpsertBranchAsync(store.BranchId, store.Name, products, ct);
                 okStores++;
                 totalRows += products.Count;
                 _logger.LogInformation("[TalabatIndex] {Store} (aid={Aid}) → {Count} منتج", store.Name, store.AreaId, products.Count);
             }
-            catch (OperationCanceledException) { throw; }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; } // إيقاف الخدمة
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("[TalabatIndex] {Store} ({Branch}) تجاوز المهلة — تخطٍّ", store.Name, store.BranchId);
+            }
             catch (Exception ex)
             {
                 _logger.LogWarning("[TalabatIndex] {Store} ({Branch}) فشل: {Msg}", store.Name, store.BranchId, ex.Message);
