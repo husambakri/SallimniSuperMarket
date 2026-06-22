@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using JordanGrocery;
 using Microsoft.EntityFrameworkCore;
 using Sallimni.Domain.Entities;
@@ -96,12 +97,23 @@ public class TalabatIndexService : BackgroundService
         }
     }
 
+    /// <summary>يوحّد اسم المتجر للمقارنة: يزيل لاحقة "(معرّف)" والفراغات والحالة.</summary>
+    private static string NormalizeName(string name)
+        => Regex.Replace(name, @"\s*\(\d+\)\s*$", "").Trim().ToLowerInvariant();
+
     private async Task RefreshAsync(CancellationToken ct)
     {
-        _logger.LogInformation("[TalabatIndex] بدء الفهرسة لـ {Count} متجر", Stores.Length);
+        // فرع واحد لكل اسم متجر (لا تكرار لأفرع نفس السلسلة — نفس السعر).
+        var unique = Stores
+            .GroupBy(s => NormalizeName(s.Name))
+            .Select(g => g.First())
+            .ToList();
+
+        _logger.LogInformation("[TalabatIndex] بدء الفهرسة لـ {Count} متجر (بعد توحيد الأسماء من {Total})",
+            unique.Count, Stores.Length);
         int okStores = 0, totalRows = 0;
 
-        foreach (var (name, branchId) in Stores)
+        foreach (var (name, branchId) in unique)
         {
             ct.ThrowIfCancellationRequested();
             try
