@@ -62,8 +62,16 @@
                     <Border Grid.Column="0" WidthRequest="76" HeightRequest="76" StrokeThickness="0"
                             BackgroundColor="{StaticResource Gray100}" StrokeShape="RoundRectangle 13" Padding="0">
                         <Grid>
+                            <!-- أيقونة بديلة ريثما تُحمَّل الصورة (placeholder) -->
                             <Label Text="🛒" FontSize="36" HorizontalOptions="Center" VerticalOptions="Center" />
-                            <Image Source="{Binding ProductImageUrl}" Aspect="AspectFill" IsVisible="{Binding ProductHasImage}" />
+                            <!-- تحميل كسول: الصورة تُجلب لا-تزامنيًّا وتُخزَّن مؤقّتًا (افتراضي MAUI) -->
+                            <Image x:Name="ProductImg" Source="{Binding ProductImageUrl}" Aspect="AspectFill"
+                                   IsVisible="{Binding ProductHasImage}" />
+                            <!-- مؤشّر أثناء التحميل -->
+                            <ActivityIndicator Color="{StaticResource Primary}" HeightRequest="24"
+                                               HorizontalOptions="Center" VerticalOptions="Center"
+                                               IsRunning="{Binding Source={x:Reference ProductImg}, Path=IsLoading}"
+                                               IsVisible="{Binding Source={x:Reference ProductImg}, Path=IsLoading}" />
                         </Grid>
                     </Border>
                     <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
