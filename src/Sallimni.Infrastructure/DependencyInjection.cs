@@ -50,6 +50,7 @@ public static class DependencyInjection
             var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("PriceCache.Connect");
             var options = ConfigurationOptions.Parse(redisConnectionString);
             options.AbortOnConnectFail = false;        // لا تُسقط الإقلاع إن غاب Redis لحظة البدء.
+            options.AllowAdmin = true;                 // يلزم لإرسال CONFIG (تفعيل AOF عند الإقلاع).
             options.ConnectRetry = 5;
             options.ConnectTimeout = 5000;
             try
