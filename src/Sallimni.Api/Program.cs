@@ -5,13 +5,17 @@ using Sallimni.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddMemoryCache(); // تخزين مؤقّت لنتائج فحص السعر (تسريع المسح المكرّر)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // قاعدة البيانات: على Railway تأتي عبر DATABASE_URL؛ محليّاً من appsettings.
 var connectionString = ResolveConnectionString(builder.Configuration);
-builder.Services.AddSallimniInfrastructure(connectionString);
+// Redis (كاش أقل سعر): REDIS_URL على Railway، أو ConnectionStrings:Redis محليّاً. غيابه ⇒ بديل صامت.
+var redisConnectionString = ResolveRedisConnectionString(builder.Configuration);
+builder.Services.AddSallimniInfrastructure(connectionString, redisConnectionString);
+
+// تسخين كاش أقل سعر عند الإقلاع + تفعيل AOF + تجديد دوري.
+builder.Services.AddHostedService<Sallimni.Api.Services.PriceCacheWarmUpService>();
 
 // مُجمِّع متاجر البقالة الأردنية (مقارنة أسعار حيّة عند مسح الباركود — للتجربة).
 builder.Services.AddSingleton(new JordanGrocery.GroceryAggregator());
@@ -62,6 +66,40 @@ static string ResolveConnectionString(IConfiguration config)
 
     return config.GetConnectionString("Sallimni")
         ?? "Host=localhost;Port=5432;Database=sallimni;Username=postgres;Password=postgres";
+}
+
+// يحلّ اتصال Redis: REDIS_URL (redis://[:pass@]host:port) من البيئة، أو ConnectionStrings:Redis.
+// يرجع null إن لم يُضبط شيء — فيعمل الخادم بكاش صامت دون Redis.
+static string? ResolveRedisConnectionString(IConfiguration config)
+{
+    var redisUrl = Environment.GetEnvironmentVariable("REDIS_URL");
+    if (!string.IsNullOrWhiteSpace(redisUrl))
+        return ConvertRedisUrl(redisUrl);
+
+    var fromConfig = config.GetConnectionString("Redis");
+    return string.IsNullOrWhiteSpace(fromConfig) ? null : fromConfig;
+}
+
+// يحوّل redis://default:pass@host:port (أو rediss:// مع TLS) إلى صيغة StackExchange.Redis.
+static string ConvertRedisUrl(string url)
+{
+    var uri = new Uri(url);
+    var port = uri.Port > 0 ? uri.Port : 6379;
+    var opts = $"{uri.Host}:{port},abortConnect=false";
+
+    if (!string.IsNullOrEmpty(uri.UserInfo))
+    {
+        var parts = uri.UserInfo.Split(':', 2);
+        if (parts.Length == 2 && parts[1].Length > 0)
+            opts += $",password={Uri.UnescapeDataString(parts[1])}";
+        if (parts[0].Length > 0 && !string.Equals(parts[0], "default", StringComparison.OrdinalIgnoreCase))
+            opts += $",user={Uri.UnescapeDataString(parts[0])}";
+    }
+
+    if (string.Equals(uri.Scheme, "rediss", StringComparison.OrdinalIgnoreCase))
+        opts += ",ssl=true";
+
+    return opts;
 }
 
 // يحوّل DATABASE_URL (postgresql://user:pass@host:port/db) إلى سلسلة اتصال Npgsql.

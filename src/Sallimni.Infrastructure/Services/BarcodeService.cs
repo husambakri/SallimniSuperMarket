@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Sallimni.Application.Abstractions;
 using Sallimni.Domain.Entities;
 using Sallimni.Domain.Enums;
 
@@ -21,7 +22,12 @@ public record BarcodeLookupResult(
 public class BarcodeService
 {
     private readonly SallimniDbContext _db;
-    public BarcodeService(SallimniDbContext db) => _db = db;
+    private readonly ILowestPriceCache _priceCache;
+    public BarcodeService(SallimniDbContext db, ILowestPriceCache priceCache)
+    {
+        _db = db;
+        _priceCache = priceCache;
+    }
 
     public async Task<BarcodeLookupResult> LookupAsync(
         string barcode, Guid? customerId = null, bool logScan = true, CancellationToken ct = default)
@@ -38,24 +44,40 @@ public class BarcodeService
         }
         else
         {
-            var offers = await _db.MerchantProducts
-                .Where(mp => mp.ProductId == product.Id && mp.IsAvailable && mp.StockQty > 0)
-                .OrderBy(mp => mp.Price)
-                .Select(mp => new { mp.Price, mp.MerchantId })
-                .ToListAsync(ct);
-
-            if (offers.Count == 0)
+            // Read-through: Redis أولاً (أقل سعر محفوظ بالباركود)، ثم القاعدة كاحتياط.
+            var cached = await _priceCache.GetAsync(barcode, ct);
+            if (cached is not null)
             {
-                result = new BarcodeLookupResult(false, product.Id, product.NameAr, product.NameEn,
-                    product.ImageUrl, product.Emoji, null, null, 0, null);
+                var savings = cached.RegularPrice > 0
+                    ? (int)Math.Round((cached.RegularPrice - cached.Price) / cached.RegularPrice * 100m)
+                    : 0;
+                result = new BarcodeLookupResult(true, product.Id, product.NameAr, product.NameEn,
+                    product.ImageUrl, product.Emoji, cached.Price, cached.RegularPrice, savings, cached.MerchantId);
             }
             else
             {
-                var cheapest = offers.First();
-                var regular = offers.Max(o => o.Price);
-                var savings = regular > 0 ? (int)Math.Round((regular - cheapest.Price) / regular * 100m) : 0;
-                result = new BarcodeLookupResult(true, product.Id, product.NameAr, product.NameEn,
-                    product.ImageUrl, product.Emoji, cheapest.Price, regular, savings, cheapest.MerchantId);
+                var offers = await _db.MerchantProducts
+                    .Where(mp => mp.ProductId == product.Id && mp.IsAvailable && mp.StockQty > 0)
+                    .OrderBy(mp => mp.Price)
+                    .Select(mp => new { mp.Price, mp.MerchantId })
+                    .ToListAsync(ct);
+
+                if (offers.Count == 0)
+                {
+                    result = new BarcodeLookupResult(false, product.Id, product.NameAr, product.NameEn,
+                        product.ImageUrl, product.Emoji, null, null, 0, null);
+                }
+                else
+                {
+                    var cheapest = offers.First();
+                    var regular = offers.Max(o => o.Price);
+                    var savings = regular > 0 ? (int)Math.Round((regular - cheapest.Price) / regular * 100m) : 0;
+                    // املأ الكاش عند أوّل قراءة فائتة (lazy warm-up للمنتجات النشطة).
+                    await _priceCache.SetAsync(
+                        barcode, new LowestPrice(cheapest.Price, regular, cheapest.MerchantId), ct);
+                    result = new BarcodeLookupResult(true, product.Id, product.NameAr, product.NameEn,
+                        product.ImageUrl, product.Emoji, cheapest.Price, regular, savings, cheapest.MerchantId);
+                }
             }
         }
 

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Sallimni.Application.Abstractions;
 using Sallimni.Domain.Entities;
 using Sallimni.Domain.Enums;
 
@@ -24,7 +25,12 @@ public record MerchantSubOrderItem(string Name, int Quantity, decimal UnitPriceI
 public class MerchantService
 {
     private readonly SallimniDbContext _db;
-    public MerchantService(SallimniDbContext db) => _db = db;
+    private readonly ILowestPriceCache _priceCache;
+    public MerchantService(SallimniDbContext db, ILowestPriceCache priceCache)
+    {
+        _db = db;
+        _priceCache = priceCache;
+    }
 
     /// <summary>كتالوج كامل مع سعر/مخزون التاجر (null إن لم يُربط بعد).</summary>
     public async Task<List<MerchantCatalogRow>> GetCatalogAsync(Guid merchantId, CancellationToken ct = default)
@@ -63,6 +69,39 @@ public class MerchantService
         mp.IsAvailable = isAvailable && stockQty > 0;
         mp.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        // Event Handler: حدّث أقل سعر للباركود في Redis فوراً بعد تغيّر السعر/المخزون.
+        await RefreshLowestPriceAsync(productId, ct);
+    }
+
+    /// <summary>
+    /// يُعيد حساب أقل سعر متوفّر للباركود من القاعدة ويزامنه مع الكاش:
+    /// يكتبه إن وُجد عرض متوفّر، ويحذف المفتاح إن لم يبقَ أي عرض (إبقاء النشط فقط).
+    /// </summary>
+    public async Task RefreshLowestPriceAsync(Guid productId, CancellationToken ct = default)
+    {
+        var barcode = await _db.Products
+            .Where(p => p.Id == productId)
+            .Select(p => p.Barcode)
+            .FirstOrDefaultAsync(ct);
+
+        if (string.IsNullOrWhiteSpace(barcode)) return; // لا يُفهرس إلّا ما له باركود.
+
+        var offers = await _db.MerchantProducts
+            .Where(mp => mp.ProductId == productId && mp.IsAvailable && mp.StockQty > 0)
+            .Select(mp => new { mp.Price, mp.MerchantId })
+            .ToListAsync(ct);
+
+        if (offers.Count == 0)
+        {
+            await _priceCache.RemoveAsync(barcode, ct);
+            return;
+        }
+
+        var cheapest = offers.MinBy(o => o.Price)!;
+        var regular = offers.Max(o => o.Price);
+        await _priceCache.SetAsync(
+            barcode, new LowestPrice(cheapest.Price, regular, cheapest.MerchantId), ct);
     }
 
     /// <summary>الطلبات الفرعية الواردة للتاجر (الأحدث أولاً).</summary>
