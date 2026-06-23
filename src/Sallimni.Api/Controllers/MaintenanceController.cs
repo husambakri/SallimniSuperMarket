@@ -1,6 +1,8 @@
+using JordanGrocery;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Sallimni.Api.Seeding;
+using Sallimni.Domain.Entities;
 using Sallimni.Infrastructure;
 
 namespace Sallimni.Api.Controllers;
@@ -11,11 +13,14 @@ namespace Sallimni.Api.Controllers;
 public class MaintenanceController : ControllerBase
 {
     private readonly SallimniDbContext _db;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<MaintenanceController> _logger;
 
-    public MaintenanceController(SallimniDbContext db, ILogger<MaintenanceController> logger)
+    public MaintenanceController(
+        SallimniDbContext db, IServiceScopeFactory scopeFactory, ILogger<MaintenanceController> logger)
     {
         _db = db;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -28,8 +33,49 @@ public class MaintenanceController : ControllerBase
             categories = await _db.Categories.CountAsync(ct),
             products = await _db.Products.CountAsync(ct),
             merchantProducts = await _db.MerchantProducts.CountAsync(ct),
+            storeBranches = await _db.StoreBranches.CountAsync(ct),          // دليل الفروع (لأقرب فرع)
+            talabatRowsWithCoords = await _db.TalabatPriceIndex.CountAsync(e => e.Latitude != null, ct),
             seedFileExists = System.IO.File.Exists(DataSeeder.DefaultCatalogPath),
         });
+
+    /// <summary>
+    /// يشغّل اكتشاف فروع طلبات ويملأ دليل الفروع فوراً (في الخلفية) — يجعل المسافات تظهر
+    /// دون انتظار دورة الفهرسة الكاملة. يتطلّب <c>confirm=RUN</c>.
+    /// </summary>
+    [HttpPost("refresh-branches")]
+    public IActionResult RefreshBranches([FromQuery] string? confirm)
+    {
+        if (confirm != "RUN")
+            return BadRequest(new { error = "أضِف ?confirm=RUN للتشغيل." });
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                _logger.LogInformation("[Maintenance] بدء اكتشاف الفروع لملء الدليل…");
+                var (_, branches) = await TalabatDiscovery.DiscoverCityStoresAsync("amman");
+                if (branches.Count == 0) { _logger.LogWarning("[Maintenance] لم تُكتشف فروع."); return; }
+
+                using var scope = _scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<SallimniDbContext>();
+                db.StoreBranches.RemoveRange(await db.StoreBranches.ToListAsync());
+                foreach (var b in branches)
+                    db.StoreBranches.Add(new StoreBranch
+                    {
+                        StoreNameNorm = TalabatDiscovery.NormalizeName(b.Name),
+                        StoreName = b.Name,
+                        BranchId = b.BranchId,
+                        Latitude = b.Latitude!.Value,
+                        Longitude = b.Longitude!.Value,
+                    });
+                await db.SaveChangesAsync();
+                _logger.LogInformation("[Maintenance] دليل الفروع امتلأ: {N} فرعًا", branches.Count);
+            }
+            catch (Exception ex) { _logger.LogError(ex, "[Maintenance] فشل ملء دليل الفروع"); }
+        });
+
+        return Accepted(new { ok = true, message = "بدأ اكتشاف الفروع في الخلفية. تحقّق عبر catalog-status بعد دقائق." });
+    }
 
     /// <summary>
     /// استيراد الكتالوج الحقيقي من ملف البذرة. مع <c>reset=true</c> يمسح الكتالوج
