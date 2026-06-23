@@ -2,6 +2,7 @@ using JordanGrocery;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Sallimni.Api.Services;
 using Sallimni.Application.Services;
 using Sallimni.Infrastructure;
 
@@ -17,14 +18,16 @@ public class LiveScanController : ControllerBase
 {
     private readonly SallimniDbContext _db;
     private readonly IMemoryCache _cache;
+    private readonly ScanCacheSignal _cacheSignal;
 
     // مدّة تخزين نتيجة المسح — تسريع الاستعلامات المكرّرة (تسعيرة البقالة لا تتغيّر بالدقائق).
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
 
-    public LiveScanController(SallimniDbContext db, IMemoryCache cache)
+    public LiveScanController(SallimniDbContext db, IMemoryCache cache, ScanCacheSignal cacheSignal)
     {
         _db = db;
         _cache = cache;
+        _cacheSignal = cacheSignal;
     }
 
     public record LiveScanResult(
@@ -57,7 +60,9 @@ public class LiveScanController : ControllerBase
 
             var storesQueried = await _db.TalabatPriceIndex.Select(e => e.BranchId).Distinct().CountAsync(ct);
             cached = new CachedScan(baseResults, storesQueried);
-            _cache.Set(cacheKey, cached, CacheTtl);
+            // يُربط بإشارة الإبطال: يُخلى فوراً عند بذر/إعادة فهرسة متجر، وإلّا ينتهي بـ TTL.
+            _cache.Set(cacheKey, cached, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = CacheTtl }
+                .AddExpirationToken(_cacheSignal.Token));
         }
 
         var results = await ApplyNearestBranchAsync(cached.Results, lat, lng, ct);

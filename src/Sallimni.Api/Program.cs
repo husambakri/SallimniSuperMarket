@@ -17,6 +17,9 @@ builder.Services.AddSallimniInfrastructure(connectionString, redisConnectionStri
 // تسخين كاش أقل سعر عند الإقلاع + تفعيل AOF + تجديد دوري.
 builder.Services.AddHostedService<Sallimni.Api.Services.PriceCacheWarmUpService>();
 
+// إشارة إبطال كاش المسح (تُخلى عند بذر/إعادة فهرسة متجر).
+builder.Services.AddSingleton<Sallimni.Api.Services.ScanCacheSignal>();
+
 // مُجمِّع متاجر البقالة الأردنية (مقارنة أسعار حيّة عند مسح الباركود — للتجربة).
 builder.Services.AddSingleton(new JordanGrocery.GroceryAggregator());
 

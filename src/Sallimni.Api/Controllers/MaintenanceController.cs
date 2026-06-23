@@ -14,13 +14,16 @@ public class MaintenanceController : ControllerBase
 {
     private readonly SallimniDbContext _db;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly Sallimni.Api.Services.ScanCacheSignal _cacheSignal;
     private readonly ILogger<MaintenanceController> _logger;
 
     public MaintenanceController(
-        SallimniDbContext db, IServiceScopeFactory scopeFactory, ILogger<MaintenanceController> logger)
+        SallimniDbContext db, IServiceScopeFactory scopeFactory,
+        Sallimni.Api.Services.ScanCacheSignal cacheSignal, ILogger<MaintenanceController> logger)
     {
         _db = db;
         _scopeFactory = scopeFactory;
+        _cacheSignal = cacheSignal;
         _logger = logger;
     }
 
@@ -114,6 +117,7 @@ public class MaintenanceController : ControllerBase
                         ImageUrl = p.ImageUrl, ProductUrl = p.ProductUrl, UpdatedAt = now,
                     });
                 await db.SaveChangesAsync();
+                _cacheSignal.Reset(); // إبطال فوري لكاش المسح.
                 _logger.LogInformation("[Maintenance] {Store} → {N} منتج", client.StoreName, products.Count);
             }
             catch (Exception ex) { _logger.LogError(ex, "[Maintenance] فشل إعادة فهرسة {Store}", client.StoreName); }
@@ -147,6 +151,7 @@ public class MaintenanceController : ControllerBase
                 ImageUrl = p.ImageUrl ?? "", ProductUrl = p.ProductUrl ?? "", UpdatedAt = now,
             });
         await _db.SaveChangesAsync(ct);
+        _cacheSignal.Reset(); // إبطال فوري لكاش المسح لإظهار الأسعار الجديدة.
         return Ok(new { ok = true, store, count = products.Count });
     }
 
