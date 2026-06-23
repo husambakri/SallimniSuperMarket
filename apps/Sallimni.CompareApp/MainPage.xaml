@@ -75,8 +75,9 @@
                     Stroke="{StaticResource Gray100}" BackgroundColor="{StaticResource Surface}" Padding="16">
                 <VerticalStackLayout Spacing="14">
 
-                    <!-- صورة المنتج الكبيرة -->
-                    <Border HeightRequest="210" StrokeThickness="0" Padding="0"
+                    <!-- صورة المنتج المربّعة (الارتفاع = العرض عبر SizeChanged) -->
+                    <Border x:Name="ImageFrame" SizeChanged="OnImageFrameSizeChanged"
+                            StrokeThickness="0" Padding="0" HorizontalOptions="Fill"
                             BackgroundColor="{StaticResource Gray100}" StrokeShape="RoundRectangle 16">
                         <Grid>
                             <Label Text="🛒" FontSize="66" HorizontalOptions="Center" VerticalOptions="Center" />

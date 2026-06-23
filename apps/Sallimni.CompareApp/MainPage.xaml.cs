@@ -34,4 +34,11 @@ public partial class MainPage : ContentPage
             finally { _handling = false; }
         });
     }
+
+    // يجعل إطار الصورة مربّعاً: الارتفاع = العرض الفعلي بعد القياس.
+    private void OnImageFrameSizeChanged(object? sender, EventArgs e)
+    {
+        if (sender is View v && v.Width > 0 && Math.Abs(v.HeightRequest - v.Width) > 0.5)
+            v.HeightRequest = v.Width;
+    }
 }
