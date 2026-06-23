@@ -77,6 +77,35 @@ public class MaintenanceController : ControllerBase
         return Accepted(new { ok = true, message = "بدأ اكتشاف الفروع في الخلفية. تحقّق عبر catalog-status بعد دقائق." });
     }
 
+    public record BranchIngest(string StoreName, string BranchId, double Latitude, double Longitude);
+
+    /// <summary>
+    /// يبذر دليل الفروع من قائمة جاهزة (تُجمع من بيئة غير محجوبة) — بديل موثوق حين تحجب
+    /// طلبات IP السيرفر. يستبدل الدليل بالكامل. يتطلّب <c>confirm=RUN</c>.
+    /// </summary>
+    [HttpPost("ingest-branches")]
+    public async Task<IActionResult> IngestBranches(
+        [FromQuery] string? confirm, [FromBody] List<BranchIngest> branches, CancellationToken ct)
+    {
+        if (confirm != "RUN")
+            return BadRequest(new { error = "أضِف ?confirm=RUN للتأكيد." });
+        if (branches is null || branches.Count == 0)
+            return BadRequest(new { error = "لا فروع في الجسم." });
+
+        _db.StoreBranches.RemoveRange(await _db.StoreBranches.ToListAsync(ct));
+        foreach (var b in branches)
+            _db.StoreBranches.Add(new StoreBranch
+            {
+                StoreNameNorm = TalabatDiscovery.NormalizeName(b.StoreName),
+                StoreName = b.StoreName,
+                BranchId = b.BranchId,
+                Latitude = b.Latitude,
+                Longitude = b.Longitude,
+            });
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { ok = true, count = branches.Count });
+    }
+
     /// <summary>
     /// استيراد الكتالوج الحقيقي من ملف البذرة. مع <c>reset=true</c> يمسح الكتالوج
     /// والطلبات القائمة أولاً (يُبقي الزبائن/السائقين/الإعدادات). يتطلّب <c>confirm=RESET</c>.
