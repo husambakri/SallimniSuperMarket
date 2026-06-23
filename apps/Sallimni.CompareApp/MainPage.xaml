@@ -55,8 +55,9 @@
                        HorizontalTextAlignment="Center" MaxLines="2" />
             </VerticalStackLayout>
 
-            <!-- معاينة الكاميرا الحيّة -->
-            <Border IsVisible="{Binding IsScanning}" StrokeShape="RoundRectangle 20" StrokeThickness="2"
+            <!-- معاينة الكاميرا الحيّة (حجم مقيّد، لا يملأ الشاشة) -->
+            <Border IsVisible="{Binding IsScanning}" HeightRequest="300" VerticalOptions="Center"
+                    StrokeShape="RoundRectangle 20" StrokeThickness="2"
                     Stroke="{StaticResource Accent}" Padding="0" BackgroundColor="{StaticResource Gray950}">
                 <Grid>
                     <scanner:CameraView x:Name="Reader"

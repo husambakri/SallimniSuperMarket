@@ -48,7 +48,10 @@ public partial class CompareViewModel : ObservableObject
                 ErrorMessage = "تعذّر الوصول للكاميرا — فعّل الإذن من إعدادات الجهاز.";
                 return;
             }
+            // أخفِ نتيجة المسح السابقة حتى تظهر الكاميرا (وإلّا غطّتها البطاقة) — يتيح إعادة المسح.
             ErrorMessage = null;
+            HasProduct = false;
+            HasCompared = false;
         }
         IsScanning = !IsScanning;
     }
