@@ -87,7 +87,9 @@ public partial class CompareViewModel : ObservableObject
 
         try
         {
-            var resp = await _api.ScanCompareAsync(code);
+            // نجلب الموقع أولاً ونمرّره فيُرجع الخادم أقرب فرع لكل متجر.
+            var me = await EnsureUserLocationAsync();
+            var resp = await _api.ScanCompareAsync(code, me?.Latitude, me?.Longitude);
             var list = resp?.Results ?? new List<LiveScanDto>();
 
             // نتيجة واحدة فقط: الأرخص = أقلّ سعر فعلي بين المتوفّر (وإلا أوّل نتيجة).

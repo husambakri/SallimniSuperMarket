@@ -12,7 +12,13 @@ public class ApiClient
 
     public ApiClient(HttpClient http) => _http = http;
 
-    public async Task<ScanCompareResponse?> ScanCompareAsync(string code, CancellationToken ct = default)
-        => await _http.GetFromJsonAsync<ScanCompareResponse>(
-            $"api/scan-compare/{Uri.EscapeDataString(code)}", JsonOpts, ct);
+    public async Task<ScanCompareResponse?> ScanCompareAsync(
+        string code, double? lat = null, double? lng = null, CancellationToken ct = default)
+    {
+        var url = $"api/scan-compare/{Uri.EscapeDataString(code)}";
+        if (lat.HasValue && lng.HasValue)
+            url += $"?lat={lat.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}" +
+                   $"&lng={lng.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        return await _http.GetFromJsonAsync<ScanCompareResponse>(url, JsonOpts, ct);
+    }
 }

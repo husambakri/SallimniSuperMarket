@@ -46,15 +46,16 @@ public static class TalabatDiscovery
     /// يكتشف كل متاجر المدينة (يمسح جميع مناطق البقالة دون توقّف مبكر). تسلسليّ
     /// وبهدوء (طلب واحد في كل مرة) لتفادي 429. يوحّد المتاجر بالاسم.
     /// </summary>
-    public static async Task<List<DiscoveredStore>> DiscoverCityStoresAsync(
+    public static async Task<(List<DiscoveredStore> Stores, List<DiscoveredStore> AllBranches)> DiscoverCityStoresAsync(
         string citySlug, CancellationToken ct = default)
     {
         using var http = NewClient();
 
         var areaPaths = await GetAreaPathsAsync(http, ct);
-        if (areaPaths.Count == 0) return [];
+        if (areaPaths.Count == 0) return ([], []);
 
-        var byName = new Dictionary<string, DiscoveredStore>(StringComparer.OrdinalIgnoreCase);
+        var byName   = new Dictionary<string, DiscoveredStore>(StringComparer.OrdinalIgnoreCase); // متجر واحد لكل اسم (للكتالوج)
+        var byBranch = new Dictionary<string, DiscoveredStore>(StringComparer.OrdinalIgnoreCase); // كل فرع له إحداثيات (للدليل)
 
         foreach (var path in areaPaths)
         {
@@ -64,15 +65,20 @@ public static class TalabatDiscovery
                 var (city, vendors) = await FetchAreaAsync(http, path, ct);
                 if (!string.Equals(city, citySlug, StringComparison.OrdinalIgnoreCase)) continue;
                 foreach (var v in vendors)
+                {
                     byName.TryAdd(NormalizeName(v.Name), v);
+                    if (v is { Latitude: not null, Longitude: not null })
+                        byBranch.TryAdd(v.BranchId, v);
+                }
             }
             catch { /* منطقة واحدة فشلت — تجاهل وواصل */ }
         }
 
-        return byName.Values.ToList();
+        return (byName.Values.ToList(), byBranch.Values.ToList());
     }
 
-    private static string NormalizeName(string name)
+    /// <summary>يوحّد اسم المتجر (يحذف لاحقة «(N)») للمطابقة بين الفهرس ودليل الفروع.</summary>
+    public static string NormalizeName(string name)
         => Regex.Replace(name, @"\s*\(\d+\)\s*$", "").Trim().ToLowerInvariant();
 
     private static async Task<List<string>> GetAreaPathsAsync(HttpClient http, CancellationToken ct)

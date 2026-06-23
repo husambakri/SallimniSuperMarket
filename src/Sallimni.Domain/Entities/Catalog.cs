@@ -125,3 +125,16 @@ public class TalabatPriceEntry : BaseEntity
     public double? Latitude  { get; set; }
     public double? Longitude { get; set; }
 }
+
+/// <summary>
+/// دليل فروع المتاجر (مواقع فقط، بلا كتالوج). فهرس الأسعار يوحّد المتجر بفرع واحد،
+/// وهذا الدليل يحتفظ بكل الفروع لإظهار أقرب فرع لنفس المتجر عند المسح.
+/// </summary>
+public class StoreBranch : BaseEntity
+{
+    public string StoreNameNorm { get; set; } = string.Empty; // اسم موحّد للمطابقة مع الفهرس
+    public string StoreName     { get; set; } = string.Empty; // الاسم كما يُعرض
+    public string BranchId      { get; set; } = string.Empty;
+    public double Latitude      { get; set; }
+    public double Longitude     { get; set; }
+}

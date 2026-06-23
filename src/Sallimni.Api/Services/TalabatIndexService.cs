@@ -56,8 +56,11 @@ public class TalabatIndexService : BackgroundService
     private async Task RefreshAsync(CancellationToken ct)
     {
         _logger.LogInformation("[TalabatIndex] اكتشاف متاجر «{City}» من طلبات…", CitySlug);
-        var stores = await TalabatDiscovery.DiscoverCityStoresAsync(CitySlug, ct);
-        _logger.LogInformation("[TalabatIndex] اكتُشف {Found} متجرًا (موحّدة بالاسم)؛ بدء فهرسة الجميع…", stores.Count);
+        var (stores, allBranches) = await TalabatDiscovery.DiscoverCityStoresAsync(CitySlug, ct);
+        _logger.LogInformation("[TalabatIndex] اكتُشف {Found} متجرًا (موحّدة بالاسم) و{Branches} فرعًا بإحداثيات؛ بدء الفهرسة…",
+            stores.Count, allBranches.Count);
+
+        await UpsertBranchDirectoryAsync(allBranches, ct);
 
         int okStores = 0, totalRows = 0;
         foreach (var store in stores)
@@ -105,6 +108,32 @@ public class TalabatIndexService : BackgroundService
         db.TalabatPriceIndex.RemoveRange(stale);
         await db.SaveChangesAsync(ct);
         _logger.LogInformation("[TalabatIndex] حُذف {N} صفًّا قديمًا (تنظيف)", stale.Count);
+    }
+
+    /// <summary>يستبدل دليل الفروع بالكامل بالقائمة الجديدة (مواقع كل الفروع لإظهار الأقرب).</summary>
+    private async Task UpsertBranchDirectoryAsync(List<JordanGrocery.TalabatDiscovery.DiscoveredStore> branches, CancellationToken ct)
+    {
+        if (branches.Count == 0) return; // لا تمسح القديم إن فشل الاكتشاف
+
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<SallimniDbContext>();
+
+        var old = await db.StoreBranches.ToListAsync(ct);
+        db.StoreBranches.RemoveRange(old);
+
+        foreach (var b in branches)
+        {
+            db.StoreBranches.Add(new StoreBranch
+            {
+                StoreNameNorm = JordanGrocery.TalabatDiscovery.NormalizeName(b.Name),
+                StoreName     = b.Name,
+                BranchId      = b.BranchId,
+                Latitude      = b.Latitude!.Value,
+                Longitude     = b.Longitude!.Value,
+            });
+        }
+        await db.SaveChangesAsync(ct);
+        _logger.LogInformation("[TalabatIndex] دليل الفروع: {N} فرعًا", branches.Count);
     }
 
     /// <summary>يستبدل كل صفوف الفرع بالنتائج الجديدة (upsert ذرّي لكل فرع).</summary>
