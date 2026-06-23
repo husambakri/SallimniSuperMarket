@@ -33,9 +33,10 @@
             </Border>
 
             <!-- زرّ مسح الكاميرا (الهاتف فقط) -->
-            <Button Text="📷  امسح بالكاميرا" Command="{Binding ToggleScanCommand}"
+            <Button Text="📷 امسح بالكاميرا" Command="{Binding ToggleScanCommand}"
                     BackgroundColor="{StaticResource Primary}" TextColor="White"
-                    CornerRadius="22" HeightRequest="46" FontAttributes="Bold">
+                    CornerRadius="26" HeightRequest="54" FontSize="16" FontAttributes="Bold"
+                    Padding="12,0" LineBreakMode="NoWrap">
                 <Button.IsVisible>
                     <OnPlatform x:TypeArguments="x:Boolean">
                         <On Platform="Android,iOS" Value="True" />
@@ -55,30 +56,34 @@
 
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource Primary}" />
 
-            <!-- بطاقة المنتج: الصورة تملأ الإطار حافة لحافة (بلا padding) -->
-            <Border IsVisible="{Binding HasProduct}" StrokeShape="RoundRectangle 16" StrokeThickness="1"
-                    Stroke="{StaticResource Gray200}" BackgroundColor="{StaticResource Surface}" Padding="12">
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                    <Border Grid.Column="0" WidthRequest="76" HeightRequest="76" StrokeThickness="0"
-                            BackgroundColor="{StaticResource Gray100}" StrokeShape="RoundRectangle 13" Padding="0">
+            <!-- بطاقة المنتج: صورة كبيرة بعرض البطاقة ثم الاسم والسعر بالوسط -->
+            <Border IsVisible="{Binding HasProduct}" StrokeShape="RoundRectangle 18" StrokeThickness="1"
+                    Stroke="{StaticResource Gray200}" BackgroundColor="{StaticResource Surface}" Padding="14">
+                <VerticalStackLayout Spacing="12">
+                    <!-- إطار الصورة الكبير -->
+                    <Border HeightRequest="200" StrokeThickness="0" Padding="0"
+                            BackgroundColor="{StaticResource Gray100}" StrokeShape="RoundRectangle 14">
                         <Grid>
                             <!-- أيقونة بديلة ريثما تُحمَّل الصورة (placeholder) -->
-                            <Label Text="🛒" FontSize="36" HorizontalOptions="Center" VerticalOptions="Center" />
-                            <!-- الصورة تُجلب لا-تزامنيًّا وتُخزَّن مؤقّتًا (تحميل كسول افتراضي في MAUI) -->
-                            <Image Source="{Binding ProductImageUrl}" Aspect="AspectFill"
+                            <Label Text="🛒" FontSize="64" HorizontalOptions="Center" VerticalOptions="Center" />
+                            <!-- الصورة تُجلب لا-تزامنيًّا وتُخزَّن مؤقّتًا — AspectFit لإظهار المنتج كاملاً -->
+                            <Image Source="{Binding ProductImageUrl}" Aspect="AspectFit" Margin="8"
                                    IsVisible="{Binding ProductHasImage}" />
                         </Grid>
                     </Border>
-                    <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
-                        <Label Text="{Binding ProductName}" FontSize="15" FontAttributes="Bold"
-                               TextColor="{StaticResource Gray900}" MaxLines="2" LineBreakMode="TailTruncation" />
-                        <HorizontalStackLayout Spacing="5">
-                            <Label Text="أرخص سعر" FontSize="12" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
-                            <Label Text="{Binding CheapestPriceText}" FontSize="22" FontAttributes="Bold" TextColor="{StaticResource Primary}" />
-                            <Label Text="د.أ" FontSize="12" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
-                        </HorizontalStackLayout>
-                    </VerticalStackLayout>
-                </Grid>
+
+                    <!-- اسم المنتج -->
+                    <Label Text="{Binding ProductName}" FontSize="17" FontAttributes="Bold"
+                           TextColor="{StaticResource Gray900}" HorizontalTextAlignment="Center"
+                           MaxLines="2" LineBreakMode="TailTruncation" />
+
+                    <!-- السعر الأرخص -->
+                    <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
+                        <Label Text="أرخص سعر" FontSize="13" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
+                        <Label Text="{Binding CheapestPriceText}" FontSize="28" FontAttributes="Bold" TextColor="{StaticResource Primary}" VerticalOptions="Center" />
+                        <Label Text="د.أ" FontSize="13" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
             </Border>
 
             <!-- المتجر الأرخص (نتيجة واحدة) -->
