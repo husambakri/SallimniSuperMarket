@@ -79,7 +79,8 @@ public partial class CompareViewModel : ObservableObject
             var resp = await _api.ScanCompareAsync(code);
             var list = resp?.Results ?? new List<LiveScanDto>();
 
-            // الأرخص = أقلّ سعر فعلي بين المتوفّر (وإلا أوّل نتيجة) — يُميَّز ويُحسب توفيره.
+            // نتيجة واحدة فقط: الأرخص = أقلّ سعر فعلي بين المتوفّر (وإلا أوّل نتيجة).
+            // التوفير يُحسب من كامل المتاجر قبل التصفية، ثم نعرض الأرخص وحده.
             var cheapest = list.Where(r => r.InStock).OrderBy(r => r.EffectivePrice).FirstOrDefault()
                            ?? list.FirstOrDefault();
             if (cheapest is not null)
@@ -96,10 +97,11 @@ public partial class CompareViewModel : ObservableObject
                 ProductHasImage = cheapest.HasImage;
                 CheapestPriceText = cheapest.PriceText;
                 HasProduct = true;
+
+                Results.Add(cheapest); // الأرخص وحده — لا قائمة بكل المتاجر.
             }
 
-            foreach (var r in list) Results.Add(r);
-            ResultCount = list.Count;
+            ResultCount = Results.Count;
 
             if (list.Count == 0)
                 ErrorMessage = "لم يُعثر على المنتج في أي متجر.";

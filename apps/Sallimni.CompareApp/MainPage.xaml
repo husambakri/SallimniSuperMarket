@@ -81,14 +81,7 @@
                 </Grid>
             </Border>
 
-            <!-- ترويسة المقارنة -->
-            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasCompared}" Margin="2,4,2,0">
-                <Label Grid.Column="0" Text="{Binding ResultCount, StringFormat='في {0} متجر'}"
-                       FontSize="14" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" VerticalOptions="Center" />
-                <Label Grid.Column="1" Text="الأرخص أولاً" FontSize="11" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
-            </Grid>
-
-            <!-- قائمة المتاجر -->
+            <!-- المتجر الأرخص (نتيجة واحدة) -->
             <VerticalStackLayout BindableLayout.ItemsSource="{Binding Results}" Spacing="0" IsVisible="{Binding HasCompared}">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="m:LiveScanDto">
