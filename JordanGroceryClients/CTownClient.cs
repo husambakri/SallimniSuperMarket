@@ -27,6 +27,7 @@ public class CTownClient : ICatalogStoreClient
     private const string QueryTemplate = """
         { products(filter: {FIELD: {eq: "VALUE"}}) { items {
             id sku name url_key stock_status
+            special_price special_from_date special_to_date
             price_range { minimum_price {
                 regular_price { value }
                 final_price   { value }
@@ -63,6 +64,7 @@ public class CTownClient : ICatalogStoreClient
             var query =
                 "{ products(filter: {price: {from: \"0\"}}, pageSize: 100, currentPage: " + page + ") { items { " +
                 "id sku name url_key stock_status " +
+                "special_price special_from_date special_to_date " +
                 "price_range { minimum_price { regular_price { value } final_price { value } discount { amount_off } } } " +
                 "small_image { url } } } }";
 
@@ -130,10 +132,17 @@ public class CTownClient : ICatalogStoreClient
         var minPrice    = p.GetPropertyOrNull("price_range")?.GetPropertyOrNull("minimum_price");
         var regularPrice = minPrice?.GetPropertyOrNull("regular_price")?.GetDecimal("value") ?? 0;
         var finalPrice   = minPrice?.GetPropertyOrNull("final_price")  ?.GetDecimal("value") ?? 0;
-        var amountOff    = minPrice?.GetPropertyOrNull("discount")     ?.GetDecimal("amount_off") ?? 0;
 
-        // special = السعر بعد الخصم (إذا في خصم)
-        var special = amountOff > 0 ? finalPrice : 0;
+        // العرض يُعتمد فقط إن كان ساري المفعول الآن: واجهة C-Town تُبقي final_price منخفضًا
+        // حتى بعد انتهاء العرض، لذا نتحقّق من تاريخي البداية/النهاية بدل الاعتماد على discount.
+        var specialPrice = p.GetDecimal("special_price");
+        var from = ParseDate(p.GetString("special_from_date"));
+        var to   = ParseDate(p.GetString("special_to_date"));
+        var now  = DateTime.UtcNow.Date;
+        var active = specialPrice > 0 && specialPrice < regularPrice
+                     && (from is null || now >= from.Value.Date)
+                     && (to   is null || now <= to.Value.Date);
+        var special = active ? specialPrice : 0;
         var price   = regularPrice > 0 ? regularPrice : finalPrice;
 
         var imageUrl = p.GetPropertyOrNull("small_image")?.GetString("url") ?? "";
@@ -148,7 +157,13 @@ public class CTownClient : ICatalogStoreClient
             InStock     : inStock,
             StockStatus : inStock ? "In Stock" : "Out Of Stock",
             ImageUrl    : imageUrl,
-            ProductUrl  : string.IsNullOrEmpty(urlKey) ? BaseUrl : $"{BaseUrl}/{urlKey}"
+            // صفحة المنتج المباشرة بالـ url_key تُعطي 404؛ البحث بالباركود يعمل.
+            ProductUrl  : string.IsNullOrEmpty(sku) ? BaseUrl : $"{BaseUrl}/catalogsearch/result/?q={sku}"
         );
     }
+
+    /// <summary>يحلّل تاريخ Magento ("yyyy-MM-dd HH:mm:ss") — null إن غاب أو فشل.</summary>
+    private static DateTime? ParseDate(string? s)
+        => DateTime.TryParse(s, System.Globalization.CultureInfo.InvariantCulture,
+               System.Globalization.DateTimeStyles.None, out var dt) ? dt : null;
 }
