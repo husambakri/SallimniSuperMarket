@@ -1,4 +1,3 @@
-using JordanGrocery;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -7,25 +6,21 @@ using Sallimni.Infrastructure;
 namespace Sallimni.Api.Controllers;
 
 /// <summary>
-/// مقارنة سعر حيّة عند مسح الباركود. يدمج:
-///  • متاجر الباركود الحيّة (Yaser، C-Town، ...) — استعلام مباشر وقت الطلب.
-///  • متاجر طلبات — تُقرأ من فهرس مُحدَّث دوريًّا (TalabatPriceIndex) فورًا.
-/// يُرجع قائمة نتائج (بطاقة لكل متجر) مرتّبة بالأرخص.
+/// مقارنة سعر عند مسح الباركود من فهرس الأسعار (TalabatPriceIndex) — قراءة فوريّة،
+/// تشمل المتاجر المفهرَسة فقط (طلبات + المتاجر المستقلّة المسحوبة). بلا استعلام حيّ.
 /// </summary>
 [ApiController]
 [Route("api/scan-compare")]
 public class LiveScanController : ControllerBase
 {
-    private readonly GroceryAggregator _agg;
     private readonly SallimniDbContext _db;
     private readonly IMemoryCache _cache;
 
     // مدّة تخزين نتيجة المسح — تسريع الاستعلامات المكرّرة (تسعيرة البقالة لا تتغيّر بالدقائق).
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
 
-    public LiveScanController(GroceryAggregator agg, SallimniDbContext db, IMemoryCache cache)
+    public LiveScanController(SallimniDbContext db, IMemoryCache cache)
     {
-        _agg = agg;
         _db = db;
         _cache = cache;
     }
@@ -45,32 +40,21 @@ public class LiveScanController : ControllerBase
         if (_cache.TryGetValue(cacheKey, out object? cachedPayload))
             return Ok(cachedPayload);
 
-        // طلبات: قراءة فوريّة من الفهرس المُحدَّث دوريًّا.
-        var indexedTask = _db.TalabatPriceIndex
+        // قراءة فوريّة من فهرس الأسعار (المتاجر المفهرَسة فقط — لا استعلام حيّ).
+        var indexed = await _db.TalabatPriceIndex
             .Where(e => e.Barcode == barcode)
             .ToListAsync(ct);
 
-        // متاجر الباركود الحيّة، بحدّ زمني ~12ث حتى لا يتعلّق الردّ على متجر بطيء.
-        var liveTask = _agg.SearchAllAsync(barcode);
-        var done = await Task.WhenAny(liveTask, Task.Delay(TimeSpan.FromSeconds(12), ct));
-        var liveTimedOut = done != liveTask;
-        var live = liveTimedOut ? new List<ProductInfo>() : await liveTask;
-
-        var indexed = await indexedTask;
-
-        var results = live
-            .Select(p => ToResult(p.Store, p.Name, p.Price, p.Special, p.InStock, p.StockStatus, p.ImageUrl, p.ProductUrl))
-            .Concat(indexed.Select(e => ToResult(e.StoreName, e.Name, e.Price, e.Special, e.InStock,
-                e.InStock ? "In Stock" : "Out Of Stock", e.ImageUrl, e.ProductUrl)))
+        var results = indexed
+            .Select(e => ToResult(e.StoreName, e.Name, e.Price, e.Special, e.InStock,
+                e.InStock ? "In Stock" : "Out Of Stock", e.ImageUrl, e.ProductUrl))
             .OrderBy(r => r.EffectivePrice)
             .ToList();
 
-        // عدد المتاجر المغطّاة: الحيّة + عدد فروع طلبات المفهرَسة.
-        var talabatStores = await _db.TalabatPriceIndex.Select(e => e.BranchId).Distinct().CountAsync(ct);
-        var storesQueried = _agg.StoreNames.Count + talabatStores;
+        var storesQueried = await _db.TalabatPriceIndex.Select(e => e.BranchId).Distinct().CountAsync(ct);
 
-        var payload = new { barcode, timedOut = liveTimedOut, storesQueried, count = results.Count, results };
-        if (!liveTimedOut) _cache.Set(cacheKey, payload, CacheTtl); // لا نخزّن نتيجة ناقصة بسبب المهلة
+        var payload = new { barcode, timedOut = false, storesQueried, count = results.Count, results };
+        _cache.Set(cacheKey, payload, CacheTtl);
         return Ok(payload);
     }
 

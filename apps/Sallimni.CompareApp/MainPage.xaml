@@ -98,13 +98,10 @@
                                 </DataTrigger>
                             </Border.Triggers>
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                <!-- صورة المتجر/المنتج تملأ إطارها حافة لحافة -->
+                                <!-- أيقونة المتجر فقط (بلا تحميل صورة لكل صفّ — صورة المنتج تكفي بالأعلى) -->
                                 <Border Grid.Column="0" WidthRequest="52" HeightRequest="52" StrokeThickness="0"
                                         BackgroundColor="{StaticResource Gray100}" StrokeShape="RoundRectangle 11" Padding="0">
-                                    <Grid>
-                                        <Label Text="{Binding Glyph}" FontSize="24" HorizontalOptions="Center" VerticalOptions="Center" />
-                                        <Image Source="{Binding ImageUrl}" Aspect="AspectFill" IsVisible="{Binding HasImage}" />
-                                    </Grid>
+                                    <Label Text="{Binding Glyph}" FontSize="24" HorizontalOptions="Center" VerticalOptions="Center" />
                                 </Border>
                                 <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                                     <HorizontalStackLayout Spacing="6">
