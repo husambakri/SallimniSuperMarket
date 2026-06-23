@@ -77,6 +77,51 @@ public class MaintenanceController : ControllerBase
         return Accepted(new { ok = true, message = "بدأ اكتشاف الفروع في الخلفية. تحقّق عبر catalog-status بعد دقائق." });
     }
 
+    /// <summary>
+    /// يعيد فهرسة متجر مستقلّ واحد فوراً (في الخلفية) — لتطبيق إصلاحات السعر دون انتظار
+    /// الدورة اليوميّة. store=ctown (افتراضي) أو yaser. يتطلّب <c>confirm=RUN</c>.
+    /// </summary>
+    [HttpPost("refresh-store")]
+    public IActionResult RefreshStore([FromQuery] string? confirm, [FromQuery] string store = "ctown")
+    {
+        if (confirm != "RUN")
+            return BadRequest(new { error = "أضِف ?confirm=RUN للتشغيل." });
+
+        ICatalogStoreClient client = store.ToLowerInvariant() switch
+        {
+            "yaser" or "yasermall" => new YaserMallClient(),
+            _ => new CTownClient(),
+        };
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                _logger.LogInformation("[Maintenance] إعادة فهرسة {Store}…", client.StoreName);
+                var products = await client.GetAllProductsAsync();
+                if (products.Count == 0) { _logger.LogWarning("[Maintenance] {Store}: 0 منتج", client.StoreName); return; }
+
+                using var scope = _scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<SallimniDbContext>();
+                var branchId = "store:" + client.StoreName;
+                db.TalabatPriceIndex.RemoveRange(await db.TalabatPriceIndex.Where(e => e.BranchId == branchId).ToListAsync());
+                var now = DateTimeOffset.UtcNow;
+                foreach (var p in products)
+                    db.TalabatPriceIndex.Add(new TalabatPriceEntry
+                    {
+                        BranchId = branchId, StoreName = client.StoreName, Barcode = p.Barcode, Name = p.Name,
+                        Price = p.Price, Special = p.Special, InStock = p.InStock,
+                        ImageUrl = p.ImageUrl, ProductUrl = p.ProductUrl, UpdatedAt = now,
+                    });
+                await db.SaveChangesAsync();
+                _logger.LogInformation("[Maintenance] {Store} → {N} منتج", client.StoreName, products.Count);
+            }
+            catch (Exception ex) { _logger.LogError(ex, "[Maintenance] فشل إعادة فهرسة {Store}", client.StoreName); }
+        });
+
+        return Accepted(new { ok = true, store = client.StoreName, message = "بدأت إعادة الفهرسة في الخلفية. تحقّق بعد دقائق." });
+    }
+
     public record BranchIngest(string StoreName, string BranchId, double Latitude, double Longitude);
 
     /// <summary>
