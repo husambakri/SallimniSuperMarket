@@ -122,6 +122,34 @@ public class MaintenanceController : ControllerBase
         return Accepted(new { ok = true, store = client.StoreName, message = "بدأت إعادة الفهرسة في الخلفية. تحقّق بعد دقائق." });
     }
 
+    public record StoreProductIngest(string Barcode, string Name, decimal Price, decimal Special, bool InStock, string? ImageUrl, string? ProductUrl);
+
+    /// <summary>
+    /// يبذر كتالوج متجر كامل من قائمة جاهزة (تُحصد من بيئة غير محجوبة) — بديل موثوق حين
+    /// يعجز الخادم عن سحب المتجر. يستبدل كل صفوف المتجر. يتطلّب <c>confirm=RUN</c>.
+    /// </summary>
+    [HttpPost("ingest-store")]
+    public async Task<IActionResult> IngestStore(
+        [FromQuery] string? confirm, [FromQuery] string store, [FromBody] List<StoreProductIngest> products, CancellationToken ct)
+    {
+        if (confirm != "RUN") return BadRequest(new { error = "أضِف ?confirm=RUN للتأكيد." });
+        if (string.IsNullOrWhiteSpace(store) || products is null || products.Count == 0)
+            return BadRequest(new { error = "store فارغ أو لا منتجات." });
+
+        var branchId = "store:" + store;
+        _db.TalabatPriceIndex.RemoveRange(await _db.TalabatPriceIndex.Where(e => e.BranchId == branchId).ToListAsync(ct));
+        var now = DateTimeOffset.UtcNow;
+        foreach (var p in products)
+            _db.TalabatPriceIndex.Add(new TalabatPriceEntry
+            {
+                BranchId = branchId, StoreName = store, Barcode = p.Barcode, Name = p.Name,
+                Price = p.Price, Special = p.Special, InStock = p.InStock,
+                ImageUrl = p.ImageUrl ?? "", ProductUrl = p.ProductUrl ?? "", UpdatedAt = now,
+            });
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { ok = true, store, count = products.Count });
+    }
+
     public record BranchIngest(string StoreName, string BranchId, double Latitude, double Longitude);
 
     /// <summary>
