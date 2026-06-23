@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/apps/">
     <Project Path="apps/Sallimni.AdminApp/Sallimni.AdminApp.csproj" />
+    <Project Path="apps/Sallimni.CompareApp/Sallimni.CompareApp.csproj" />
     <Project Path="apps/Sallimni.CustomerApp/Sallimni.CustomerApp.csproj" />
     <Project Path="apps/Sallimni.DriverApp/Sallimni.DriverApp.csproj" />
     <Project Path="apps/Sallimni.MerchantApp/Sallimni.MerchantApp.csproj" />
