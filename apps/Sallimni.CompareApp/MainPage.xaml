@@ -2,7 +2,6 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Sallimni.CompareApp.ViewModels"
-             xmlns:m="clr-namespace:Sallimni.CompareApp.Models"
              xmlns:scanner="clr-namespace:BarcodeScanning;assembly=BarcodeScanning.Native.Maui"
              x:Class="Sallimni.CompareApp.MainPage"
              x:DataType="vm:CompareViewModel"
@@ -11,31 +10,38 @@
              Title="مقارنة الأسعار">
 
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="14">
+        <VerticalStackLayout Padding="18,16,18,28" Spacing="18">
 
-            <Grid ColumnDefinitions="*,Auto">
-                <Label Grid.Column="0" Text="مقارنة الأسعار" FontSize="20" FontAttributes="Bold"
-                       TextColor="{StaticResource PrimaryDark}" VerticalOptions="Center" />
-                <Label Grid.Column="1" Text="🔍" FontSize="20" VerticalOptions="Center" />
-            </Grid>
+            <!-- الترويسة -->
+            <VerticalStackLayout Spacing="2">
+                <Label Text="مقارنة الأسعار" FontSize="23" FontAttributes="Bold" TextColor="{StaticResource Primary}" />
+                <Label Text="امسح الباركود واعرف أرخص سعر فوراً" FontSize="13" TextColor="{StaticResource Gray500}" />
+            </VerticalStackLayout>
 
             <!-- معاينة الكاميرا الحيّة (أثناء المسح) -->
-            <Border IsVisible="{Binding IsScanning}" StrokeShape="RoundRectangle 16" StrokeThickness="2"
-                    Stroke="{StaticResource Accent}" HeightRequest="260" Padding="0"
-                    BackgroundColor="{StaticResource PrimaryDark}">
-                <scanner:CameraView x:Name="Reader"
-                        CameraEnabled="{Binding IsScanning}"
-                        VibrationOnDetected="True"
-                        ViewfinderMode="True"
-                        CaptureQuality="Medium"
-                        BarcodeSymbologies="All"
-                        OnDetectionFinished="OnDetectionFinished" />
+            <Border IsVisible="{Binding IsScanning}" StrokeShape="RoundRectangle 20" StrokeThickness="2"
+                    Stroke="{StaticResource Accent}" HeightRequest="280" Padding="0"
+                    BackgroundColor="{StaticResource Gray950}">
+                <Grid>
+                    <scanner:CameraView x:Name="Reader"
+                            CameraEnabled="{Binding IsScanning}"
+                            VibrationOnDetected="True"
+                            ViewfinderMode="True"
+                            CaptureQuality="Medium"
+                            BarcodeSymbologies="All"
+                            OnDetectionFinished="OnDetectionFinished" />
+                    <!-- تلميح المسح -->
+                    <Border VerticalOptions="End" HorizontalOptions="Center" Margin="0,0,0,14"
+                            BackgroundColor="#CC000000" StrokeThickness="0" StrokeShape="RoundRectangle 14" Padding="14,7">
+                        <Label Text="وجّه الكاميرا نحو الباركود" FontSize="12" TextColor="White" />
+                    </Border>
+                </Grid>
             </Border>
 
-            <!-- زرّ مسح الكاميرا (الهاتف فقط) -->
-            <Button Text="📷 امسح بالكاميرا" Command="{Binding ToggleScanCommand}"
+            <!-- الفعل الأساسي: امسح بالكاميرا (الهاتف فقط) -->
+            <Button Text="📷  امسح الباركود" Command="{Binding ToggleScanCommand}"
                     BackgroundColor="{StaticResource Primary}" TextColor="White"
-                    CornerRadius="26" HeightRequest="54" FontSize="16" FontAttributes="Bold"
+                    CornerRadius="27" HeightRequest="54" FontSize="16" FontAttributes="Bold"
                     Padding="12,0" LineBreakMode="NoWrap">
                 <Button.IsVisible>
                     <OnPlatform x:TypeArguments="x:Boolean">
@@ -45,90 +51,97 @@
                 </Button.IsVisible>
             </Button>
 
-            <!-- إدخال يدوي + قارن -->
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <Entry Grid.Column="0" Placeholder="أدخل الباركود يدويًا" Text="{Binding Barcode}"
-                       Keyboard="Numeric" FontSize="16" />
-                <Button Grid.Column="1" Text="قارن" Command="{Binding CompareCommand}"
-                        BackgroundColor="{StaticResource PrimaryDark}" TextColor="White"
-                        CornerRadius="22" WidthRequest="84" />
-            </Grid>
+            <!-- إدخال يدوي أنيق (حقل + قارن داخل حبّة واحدة) -->
+            <Border Stroke="{StaticResource Gray200}" StrokeThickness="1" StrokeShape="RoundRectangle 27"
+                    BackgroundColor="{StaticResource Surface}" Padding="6,5">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="4" VerticalOptions="Center">
+                    <Label Grid.Column="0" Text="🔎" FontSize="16" Margin="10,0,2,0" VerticalOptions="Center" />
+                    <Entry Grid.Column="1" Placeholder="أدخل الباركود يدويًا" Text="{Binding Barcode}"
+                           Keyboard="Numeric" FontSize="16" BackgroundColor="Transparent" VerticalOptions="Center" />
+                    <Button Grid.Column="2" Text="قارن" Command="{Binding CompareCommand}"
+                            BackgroundColor="{StaticResource Primary}" TextColor="White"
+                            CornerRadius="21" HeightRequest="42" Padding="20,0" FontAttributes="Bold" />
+                </Grid>
+            </Border>
 
-            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" Color="{StaticResource Primary}" />
+            <!-- جارٍ البحث -->
+            <VerticalStackLayout IsVisible="{Binding IsBusy}" Spacing="8" Margin="0,12">
+                <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource Primary}" />
+                <Label Text="نبحث عن أرخص سعر…" FontSize="13" TextColor="{StaticResource Gray500}" HorizontalOptions="Center" />
+            </VerticalStackLayout>
 
-            <!-- بطاقة المنتج: صورة كبيرة بعرض البطاقة ثم الاسم والسعر بالوسط -->
-            <Border IsVisible="{Binding HasProduct}" StrokeShape="RoundRectangle 18" StrokeThickness="1"
-                    Stroke="{StaticResource Gray200}" BackgroundColor="{StaticResource Surface}" Padding="14">
-                <VerticalStackLayout Spacing="12">
-                    <!-- إطار الصورة الكبير -->
-                    <Border HeightRequest="200" StrokeThickness="0" Padding="0"
-                            BackgroundColor="{StaticResource Gray100}" StrokeShape="RoundRectangle 14">
+            <!-- بطاقة النتيجة الموحّدة: صورة كبيرة → سعر → توفير → المتجر -->
+            <Border IsVisible="{Binding HasProduct}" StrokeShape="RoundRectangle 22" StrokeThickness="1"
+                    Stroke="{StaticResource Gray100}" BackgroundColor="{StaticResource Surface}" Padding="16">
+                <VerticalStackLayout Spacing="14">
+
+                    <!-- صورة المنتج الكبيرة -->
+                    <Border HeightRequest="210" StrokeThickness="0" Padding="0"
+                            BackgroundColor="{StaticResource Gray100}" StrokeShape="RoundRectangle 16">
                         <Grid>
-                            <!-- أيقونة بديلة ريثما تُحمَّل الصورة (placeholder) -->
-                            <Label Text="🛒" FontSize="64" HorizontalOptions="Center" VerticalOptions="Center" />
-                            <!-- الصورة تُجلب لا-تزامنيًّا وتُخزَّن مؤقّتًا — AspectFit لإظهار المنتج كاملاً -->
-                            <Image Source="{Binding ProductImageUrl}" Aspect="AspectFit" Margin="8"
+                            <Label Text="🛒" FontSize="66" HorizontalOptions="Center" VerticalOptions="Center" />
+                            <Image Source="{Binding ProductImageUrl}" Aspect="AspectFit" Margin="10"
                                    IsVisible="{Binding ProductHasImage}" />
                         </Grid>
                     </Border>
 
                     <!-- اسم المنتج -->
-                    <Label Text="{Binding ProductName}" FontSize="17" FontAttributes="Bold"
+                    <Label Text="{Binding ProductName}" FontSize="18" FontAttributes="Bold"
                            TextColor="{StaticResource Gray900}" HorizontalTextAlignment="Center"
                            MaxLines="2" LineBreakMode="TailTruncation" />
 
-                    <!-- السعر الأرخص -->
-                    <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
-                        <Label Text="أرخص سعر" FontSize="13" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
-                        <Label Text="{Binding CheapestPriceText}" FontSize="28" FontAttributes="Bold" TextColor="{StaticResource Primary}" VerticalOptions="Center" />
-                        <Label Text="د.أ" FontSize="13" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
-                    </HorizontalStackLayout>
+                    <!-- كتلة السعر + التوفير -->
+                    <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
+                        <Label Text="أرخص سعر" FontSize="12" TextColor="{StaticResource Gray500}" HorizontalOptions="Center" />
+                        <HorizontalStackLayout Spacing="5" HorizontalOptions="Center">
+                            <Label Text="{Binding CheapestPriceText}" FontSize="40" FontAttributes="Bold" TextColor="{StaticResource Primary}" />
+                            <Label Text="د.أ" FontSize="16" TextColor="{StaticResource Gray500}" VerticalOptions="End" Margin="0,0,0,9" />
+                        </HorizontalStackLayout>
+                        <!-- حبّة التوفير (خضراء = إشارة الربح) -->
+                        <Border IsVisible="{Binding HasSavings}" BackgroundColor="{StaticResource Accent}"
+                                StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="14,6" HorizontalOptions="Center">
+                            <Label Text="{Binding SavingsText}" FontSize="13" FontAttributes="Bold" TextColor="White" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- فاصل -->
+                    <BoxView HeightRequest="1" Color="{StaticResource Gray100}" Margin="0,2" />
+
+                    <!-- المتجر الأرخص + التوفّر -->
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                        <Border Grid.Column="0" WidthRequest="46" HeightRequest="46" StrokeThickness="0"
+                                BackgroundColor="{StaticResource Gray100}" StrokeShape="RoundRectangle 12" Padding="0">
+                            <Label Text="🏪" FontSize="22" HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
+                            <Label Text="{Binding StoreName}" FontSize="15" FontAttributes="Bold"
+                                   TextColor="{StaticResource Gray900}" MaxLines="1" LineBreakMode="TailTruncation" />
+                            <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                <BoxView WidthRequest="8" HeightRequest="8" CornerRadius="4" VerticalOptions="Center"
+                                         Color="{StaticResource Gray300}">
+                                    <BoxView.Triggers>
+                                        <DataTrigger TargetType="BoxView" Binding="{Binding InStock}" Value="True">
+                                            <Setter Property="Color" Value="{StaticResource Accent}" />
+                                        </DataTrigger>
+                                    </BoxView.Triggers>
+                                </BoxView>
+                                <Label Text="{Binding AvailabilityText}" FontSize="12" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Grid>
+
                 </VerticalStackLayout>
             </Border>
 
-            <!-- المتجر الأرخص (نتيجة واحدة) -->
-            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Results}" Spacing="0" IsVisible="{Binding HasCompared}">
-                <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="m:LiveScanDto">
-                        <Border StrokeShape="RoundRectangle 12" StrokeThickness="1" Stroke="{StaticResource Gray200}"
-                                Padding="10" Margin="0,0,0,8" Opacity="{Binding RowOpacity}">
-                            <Border.Triggers>
-                                <DataTrigger TargetType="Border" Binding="{Binding IsCheapest}" Value="True">
-                                    <Setter Property="Stroke" Value="{StaticResource Primary}" />
-                                    <Setter Property="StrokeThickness" Value="2" />
-                                </DataTrigger>
-                            </Border.Triggers>
-                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                <!-- أيقونة المتجر فقط (بلا تحميل صورة لكل صفّ — صورة المنتج تكفي بالأعلى) -->
-                                <Border Grid.Column="0" WidthRequest="52" HeightRequest="52" StrokeThickness="0"
-                                        BackgroundColor="{StaticResource Gray100}" StrokeShape="RoundRectangle 11" Padding="0">
-                                    <Label Text="{Binding Glyph}" FontSize="24" HorizontalOptions="Center" VerticalOptions="Center" />
-                                </Border>
-                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                                    <HorizontalStackLayout Spacing="6">
-                                        <Label Text="{Binding Store}" FontSize="14" FontAttributes="Bold"
-                                               TextColor="{StaticResource Gray900}" MaxLines="1" VerticalOptions="Center" />
-                                        <Border IsVisible="{Binding IsCheapest}" BackgroundColor="{StaticResource Primary}"
-                                                StrokeThickness="0" StrokeShape="RoundRectangle 8" Padding="6,1" VerticalOptions="Center">
-                                            <Label Text="الأرخص" FontSize="10" TextColor="White" />
-                                        </Border>
-                                    </HorizontalStackLayout>
-                                    <Label Text="{Binding AvailabilityText}" FontSize="11" TextColor="{StaticResource Gray400}" MaxLines="1" />
-                                    <Label Text="{Binding Note}" FontSize="11" FontAttributes="Bold" TextColor="{StaticResource Primary}"
-                                           IsVisible="{Binding HasNote}" MaxLines="1" />
-                                </VerticalStackLayout>
-                                <HorizontalStackLayout Grid.Column="2" Spacing="3" VerticalOptions="Center">
-                                    <Label Text="{Binding PriceText}" FontSize="17" FontAttributes="Bold" TextColor="{StaticResource PrimaryDark}" />
-                                    <Label Text="د.أ" FontSize="11" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
-                                </HorizontalStackLayout>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </BindableLayout.ItemTemplate>
-            </VerticalStackLayout>
-
-            <Label Text="{Binding ErrorMessage}" TextColor="#A32D2D" FontSize="13"
-                   IsVisible="{Binding HasError}" HorizontalOptions="Center" Margin="0,4" />
+            <!-- حالة لا نتيجة / خطأ -->
+            <Border IsVisible="{Binding HasError}" StrokeShape="RoundRectangle 18" StrokeThickness="1"
+                    Stroke="{StaticResource Gray100}" BackgroundColor="{StaticResource Surface}" Padding="20">
+                <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
+                    <Label Text="🔍" FontSize="34" HorizontalOptions="Center" />
+                    <Label Text="{Binding ErrorMessage}" FontSize="14" TextColor="{StaticResource Gray600}"
+                           HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </Border>
 
         </VerticalStackLayout>
     </ScrollView>

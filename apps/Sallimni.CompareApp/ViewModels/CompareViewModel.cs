@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Sallimni.CompareApp.Models;
@@ -21,19 +20,21 @@ public partial class CompareViewModel : ObservableObject
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _hasCompared;
     [ObservableProperty] private string? _errorMessage;
-    [ObservableProperty] private int _resultCount;
 
     public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
     partial void OnErrorMessageChanged(string? value) => OnPropertyChanged(nameof(HasError));
 
-    // ملخّص المنتج (من أرخص نتيجة).
+    // بطاقة النتيجة الواحدة (الأرخص) — كل حقولها مشتقّة من أرخص عرض.
     [ObservableProperty] private bool _hasProduct;
     [ObservableProperty] private string? _productName;
     [ObservableProperty] private string? _productImageUrl;
     [ObservableProperty] private bool _productHasImage;
     [ObservableProperty] private string? _cheapestPriceText;
-
-    public ObservableCollection<LiveScanDto> Results { get; } = new();
+    [ObservableProperty] private string? _storeName;
+    [ObservableProperty] private bool _inStock;
+    [ObservableProperty] private string _availabilityText = "";
+    [ObservableProperty] private string? _savingsText;
+    [ObservableProperty] private bool _hasSavings;
 
     /// <summary>تشغيل/إيقاف مسح الكاميرا (يطلب الإذن عند التشغيل).</summary>
     [RelayCommand]
@@ -72,7 +73,8 @@ public partial class CompareViewModel : ObservableObject
         ErrorMessage = null;
         HasCompared = false;
         HasProduct = false;
-        Results.Clear();
+        HasSavings = false;
+        SavingsText = null;
 
         try
         {
@@ -85,23 +87,25 @@ public partial class CompareViewModel : ObservableObject
                            ?? list.FirstOrDefault();
             if (cheapest is not null)
             {
-                cheapest.IsCheapest = true;
-                if (list.Count > 1)
-                {
-                    var save = list.Max(r => r.EffectivePrice) - cheapest.EffectivePrice;
-                    if (save > 0) cheapest.Note = $"وفّر {save:0.00} د.أ";
-                }
-
                 ProductName = cheapest.Name;
                 ProductImageUrl = cheapest.HasImage ? cheapest.ImageUrl : null;
                 ProductHasImage = cheapest.HasImage;
                 CheapestPriceText = cheapest.PriceText;
+                StoreName = cheapest.Store;
+                InStock = cheapest.InStock;
+                AvailabilityText = cheapest.AvailabilityText;
                 HasProduct = true;
 
-                Results.Add(cheapest); // الأرخص وحده — لا قائمة بكل المتاجر.
+                if (list.Count > 1)
+                {
+                    var save = list.Max(r => r.EffectivePrice) - cheapest.EffectivePrice;
+                    if (save > 0)
+                    {
+                        SavingsText = $"وفّر {save:0.00} د.أ";
+                        HasSavings = true;
+                    }
+                }
             }
-
-            ResultCount = Results.Count;
 
             if (list.Count == 0)
                 ErrorMessage = "لم يُعثر على المنتج في أي متجر.";
