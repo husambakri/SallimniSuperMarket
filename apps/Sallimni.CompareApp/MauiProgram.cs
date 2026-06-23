@@ -9,6 +9,12 @@ public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
+        // تسجيل أي استثناء غير معالَج في crash.log داخل بيانات التطبيق (تشخيص الكراش).
+        var logPath = Path.Combine(FileSystem.AppDataDirectory, "crash.log");
+        void Log(object? ex) => File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] {ex}\n\n");
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => Log(e.ExceptionObject);
+        TaskScheduler.UnobservedTaskException += (_, e) => Log(e.Exception);
+
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
