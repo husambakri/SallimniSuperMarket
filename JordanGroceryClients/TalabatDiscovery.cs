@@ -77,6 +77,18 @@ public static class TalabatDiscovery
         return (byName.Values.ToList(), byBranch.Values.ToList());
     }
 
+    /// <summary>إحداثيّة من كائن المتجر: قد تكون رقمًا أو نصًّا (اختلاف بين المناطق).</summary>
+    private static double? ParseCoord(JsonElement v, string name)
+    {
+        if (!v.TryGetProperty(name, out var el)) return null;
+        if (el.ValueKind == JsonValueKind.Number) return el.GetDouble();
+        if (el.ValueKind == JsonValueKind.String &&
+            double.TryParse(el.GetString(), System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var d))
+            return d;
+        return null;
+    }
+
     /// <summary>يوحّد اسم المتجر (يحذف لاحقة «(N)») للمطابقة بين الفهرس ودليل الفروع.</summary>
     public static string NormalizeName(string name)
         => Regex.Replace(name, @"\s*\(\d+\)\s*$", "").Trim().ToLowerInvariant();
@@ -154,11 +166,9 @@ public static class TalabatDiscovery
                     ? sa.GetInt32() : 0;
                 if (aid == 0) continue;
 
-                // إحداثيات الفرع (لحساب المسافة) — تتوفّر في كائن المتجر.
-                double? lat = v.TryGetProperty("latitude", out var latEl) && latEl.ValueKind == JsonValueKind.Number
-                    ? latEl.GetDouble() : null;
-                double? lng = v.TryGetProperty("longitude", out var lngEl) && lngEl.ValueKind == JsonValueKind.Number
-                    ? lngEl.GetDouble() : null;
+                // إحداثيات الفرع (لحساب المسافة) — قد تأتي رقمًا أو نصًّا حسب المنطقة.
+                double? lat = ParseCoord(v, "latitude");
+                double? lng = ParseCoord(v, "longitude");
 
                 vendors.Add(new DiscoveredStore(branchId, name!, slug, aid, lat, lng));
             }
