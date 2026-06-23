@@ -51,8 +51,21 @@ public class StoreCatalogIndexService : BackgroundService
         }
     }
 
+    // إحداثيات فروع المتاجر المستقلّة (من خرائط جوجل/OSM) — لإظهار أقرب فرع كبقيّة المتاجر.
+    private static readonly (string Store, double Lat, double Lng)[] IndependentBranches =
+    {
+        ("Yaser Mall", 31.9552917, 35.8342570),  // وادي السير
+        ("C-Town",     31.9599126, 35.8594162),  // وادي السير / السابع
+        ("C-Town",     31.9635083, 35.9082888),  // العبدلي مول
+        ("C-Town",     31.9795420, 35.9218491),  // الاستقلال مول
+        ("C-Town",     31.9539731, 35.9319340),  // جبل الحسين
+        ("C-Town",     31.9904631, 35.8662771),  // عمّان مول
+    };
+
     private async Task RefreshAsync(CancellationToken ct)
     {
+        await UpsertIndependentBranchesAsync(ct);
+
         foreach (var factory in Stores)
         {
             ct.ThrowIfCancellationRequested();
@@ -78,6 +91,33 @@ public class StoreCatalogIndexService : BackgroundService
                 _logger.LogWarning("[StoreIndex] {Store} فشل: {Msg}", client.StoreName, ex.Message);
             }
         }
+    }
+
+    /// <summary>يكتب إحداثيات فروع المتاجر المستقلّة في دليل الفروع (Source="independent" — لا يمسّه اكتشاف طلبات).</summary>
+    private async Task UpsertIndependentBranchesAsync(CancellationToken ct)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<SallimniDbContext>();
+
+        var old = await db.StoreBranches.Where(b => b.Source == "independent").ToListAsync(ct);
+        db.StoreBranches.RemoveRange(old);
+
+        var n = 0;
+        foreach (var (store, lat, lng) in IndependentBranches)
+        {
+            db.StoreBranches.Add(new StoreBranch
+            {
+                StoreNameNorm = JordanGrocery.TalabatDiscovery.NormalizeName(store),
+                StoreName     = store,
+                BranchId      = $"independent:{store}:{n}",
+                Latitude      = lat,
+                Longitude     = lng,
+                Source        = "independent",
+            });
+            n++;
+        }
+        await db.SaveChangesAsync(ct);
+        _logger.LogInformation("[StoreIndex] دليل فروع المتاجر المستقلّة: {N} فرعًا", n);
     }
 
     /// <summary>يستبدل كل صفوف المتجر بالنتائج الجديدة (upsert ذرّي لكل متجر).</summary>

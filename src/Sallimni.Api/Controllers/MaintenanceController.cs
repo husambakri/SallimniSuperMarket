@@ -92,7 +92,8 @@ public class MaintenanceController : ControllerBase
         if (branches is null || branches.Count == 0)
             return BadRequest(new { error = "لا فروع في الجسم." });
 
-        _db.StoreBranches.RemoveRange(await _db.StoreBranches.ToListAsync(ct));
+        // يستبدل فروع طلبات فقط — لا يمسّ المتاجر المستقلّة.
+        _db.StoreBranches.RemoveRange(await _db.StoreBranches.Where(b => b.Source == "talabat").ToListAsync(ct));
         foreach (var b in branches)
             _db.StoreBranches.Add(new StoreBranch
             {
@@ -101,6 +102,7 @@ public class MaintenanceController : ControllerBase
                 BranchId = b.BranchId,
                 Latitude = b.Latitude,
                 Longitude = b.Longitude,
+                Source = "talabat",
             });
         await _db.SaveChangesAsync(ct);
         return Ok(new { ok = true, count = branches.Count });

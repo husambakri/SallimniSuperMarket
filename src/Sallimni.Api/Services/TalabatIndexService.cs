@@ -118,7 +118,8 @@ public class TalabatIndexService : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SallimniDbContext>();
 
-        var old = await db.StoreBranches.ToListAsync(ct);
+        // يستبدل فروع طلبات فقط — لا يمسّ المتاجر المستقلّة (Source="independent").
+        var old = await db.StoreBranches.Where(b => b.Source == "talabat").ToListAsync(ct);
         db.StoreBranches.RemoveRange(old);
 
         foreach (var b in branches)
@@ -130,6 +131,7 @@ public class TalabatIndexService : BackgroundService
                 BranchId      = b.BranchId,
                 Latitude      = b.Latitude!.Value,
                 Longitude     = b.Longitude!.Value,
+                Source        = "talabat",
             });
         }
         await db.SaveChangesAsync(ct);

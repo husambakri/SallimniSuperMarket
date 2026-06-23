@@ -137,4 +137,6 @@ public class StoreBranch : BaseEntity
     public string BranchId      { get; set; } = string.Empty;
     public double Latitude      { get; set; }
     public double Longitude     { get; set; }
+    /// <summary>مصدر الصفّ: "talabat" (اكتشاف) أو "independent" (متاجر مستقلّة) — كل مصدر يحدّث صفوفه فقط.</summary>
+    public string Source        { get; set; } = "talabat";
 }
