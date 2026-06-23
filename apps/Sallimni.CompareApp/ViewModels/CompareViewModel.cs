@@ -35,6 +35,10 @@ public partial class CompareViewModel : ObservableObject
     [ObservableProperty] private string _availabilityText = "";
     [ObservableProperty] private string? _savingsText;
     [ObservableProperty] private bool _hasSavings;
+    [ObservableProperty] private string? _distanceText;
+    [ObservableProperty] private bool _hasDistance;
+
+    private Location? _userLocation; // موقع المستخدم (يُجلب مرّة ويُخزَّن).
 
     /// <summary>تشغيل/إيقاف مسح الكاميرا (يطلب الإذن عند التشغيل).</summary>
     [RelayCommand]
@@ -78,6 +82,8 @@ public partial class CompareViewModel : ObservableObject
         HasProduct = false;
         HasSavings = false;
         SavingsText = null;
+        HasDistance = false;
+        DistanceText = null;
 
         try
         {
@@ -108,6 +114,8 @@ public partial class CompareViewModel : ObservableObject
                         HasSavings = true;
                     }
                 }
+
+                await SetDistanceAsync(cheapest);
             }
 
             if (list.Count == 0)
@@ -122,5 +130,39 @@ public partial class CompareViewModel : ObservableObject
             IsBusy = false;
             HasCompared = true;
         }
+    }
+
+    /// <summary>يحسب كم يبعد المتجر الأرخص عن المستخدم ويضبط نصّ المسافة (best-effort).</summary>
+    private async Task SetDistanceAsync(LiveScanDto cheapest)
+    {
+        if (!cheapest.HasLocation) return;               // المتجر بلا إحداثيات.
+        var me = await EnsureUserLocationAsync();
+        if (me is null) return;                          // تعذّر تحديد الموقع — نتجاهل بصمت.
+
+        var km = Location.CalculateDistance(
+            me.Latitude, me.Longitude,
+            cheapest.Latitude!.Value, cheapest.Longitude!.Value, DistanceUnits.Kilometers);
+
+        DistanceText = km < 1 ? $"يبعد {km * 1000:0} م عنك" : $"يبعد {km:0.0} كم عنك";
+        HasDistance = true;
+    }
+
+    /// <summary>يطلب إذن الموقع ويجلبه مرّة واحدة ثم يخزّنه (آخر موقع معروف أوّلاً للسرعة).</summary>
+    private async Task<Location?> EnsureUserLocationAsync()
+    {
+        if (_userLocation is not null) return _userLocation;
+        try
+        {
+            var status = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
+            if (status != PermissionStatus.Granted)
+                status = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
+            if (status != PermissionStatus.Granted) return null;
+
+            _userLocation = await Geolocation.GetLastKnownLocationAsync()
+                ?? await Geolocation.GetLocationAsync(
+                    new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(8)));
+            return _userLocation;
+        }
+        catch { return null; }
     }
 }

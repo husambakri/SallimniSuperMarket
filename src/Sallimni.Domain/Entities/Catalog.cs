@@ -121,4 +121,7 @@ public class TalabatPriceEntry : BaseEntity
     public bool InStock      { get; set; }
     public string ImageUrl   { get; set; } = string.Empty;
     public string ProductUrl { get; set; } = string.Empty;
+    /// <summary>إحداثيات فرع المتجر (لحساب المسافة لأقرب متجر) — null إن لم تتوفّر.</summary>
+    public double? Latitude  { get; set; }
+    public double? Longitude { get; set; }
 }

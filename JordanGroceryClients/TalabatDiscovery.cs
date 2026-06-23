@@ -38,8 +38,9 @@ public static class TalabatDiscovery
         return http;
     }
 
-    /// <summary>متجر مكتشَف: معرّف الفرع + الاسم + الـslug + معرّف المنطقة (aid) لفتح كتالوجه.</summary>
-    public readonly record struct DiscoveredStore(string BranchId, string Name, string Slug, int AreaId);
+    /// <summary>متجر مكتشَف: معرّف الفرع + الاسم + الـslug + معرّف المنطقة (aid) + إحداثيات الفرع.</summary>
+    public readonly record struct DiscoveredStore(
+        string BranchId, string Name, string Slug, int AreaId, double? Latitude, double? Longitude);
 
     /// <summary>
     /// يكتشف كل متاجر المدينة (يمسح جميع مناطق البقالة دون توقّف مبكر). تسلسليّ
@@ -147,7 +148,13 @@ public static class TalabatDiscovery
                     ? sa.GetInt32() : 0;
                 if (aid == 0) continue;
 
-                vendors.Add(new DiscoveredStore(branchId, name!, slug, aid));
+                // إحداثيات الفرع (لحساب المسافة) — تتوفّر في كائن المتجر.
+                double? lat = v.TryGetProperty("latitude", out var latEl) && latEl.ValueKind == JsonValueKind.Number
+                    ? latEl.GetDouble() : null;
+                double? lng = v.TryGetProperty("longitude", out var lngEl) && lngEl.ValueKind == JsonValueKind.Number
+                    ? lngEl.GetDouble() : null;
+
+                vendors.Add(new DiscoveredStore(branchId, name!, slug, aid, lat, lng));
             }
         }
         return (city, vendors);

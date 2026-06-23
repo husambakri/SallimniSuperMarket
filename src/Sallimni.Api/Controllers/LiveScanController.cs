@@ -27,7 +27,8 @@ public class LiveScanController : ControllerBase
 
     public record LiveScanResult(
         string Store, string Name, decimal Price, decimal Special, decimal EffectivePrice,
-        bool InStock, string StockStatus, string ImageUrl, string ProductUrl);
+        bool InStock, string StockStatus, string ImageUrl, string ProductUrl,
+        double? Latitude, double? Longitude);
 
     [HttpGet("{barcode}")]
     public async Task<IActionResult> Compare(string barcode, CancellationToken ct)
@@ -47,7 +48,7 @@ public class LiveScanController : ControllerBase
 
         var results = indexed
             .Select(e => ToResult(e.StoreName, e.Name, e.Price, e.Special, e.InStock,
-                e.InStock ? "In Stock" : "Out Of Stock", e.ImageUrl, e.ProductUrl))
+                e.InStock ? "In Stock" : "Out Of Stock", e.ImageUrl, e.ProductUrl, e.Latitude, e.Longitude))
             .OrderBy(r => r.EffectivePrice)
             .ToList();
 
@@ -84,9 +85,9 @@ public class LiveScanController : ControllerBase
     }
 
     private static LiveScanResult ToResult(string store, string name, decimal price, decimal special,
-        bool inStock, string stockStatus, string imageUrl, string productUrl)
+        bool inStock, string stockStatus, string imageUrl, string productUrl, double? lat, double? lng)
     {
         var effective = special > 0 ? special : price;
-        return new LiveScanResult(store, name, price, special, effective, inStock, stockStatus, imageUrl, productUrl);
+        return new LiveScanResult(store, name, price, special, effective, inStock, stockStatus, imageUrl, productUrl, lat, lng);
     }
 }

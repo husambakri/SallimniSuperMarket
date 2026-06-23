@@ -71,7 +71,7 @@ public class TalabatIndexService : BackgroundService
 
                 var client = new TalabatClient(store.Name, store.BranchId, store.Slug, store.AreaId);
                 var products = await client.GetAllProductsAsync(storeCts.Token);
-                await UpsertBranchAsync(store.BranchId, store.Name, products, ct);
+                await UpsertBranchAsync(store.BranchId, store.Name, store.Latitude, store.Longitude, products, ct);
                 okStores++;
                 totalRows += products.Count;
                 _logger.LogInformation("[TalabatIndex] {Store} (aid={Aid}) → {Count} منتج", store.Name, store.AreaId, products.Count);
@@ -108,7 +108,8 @@ public class TalabatIndexService : BackgroundService
     }
 
     /// <summary>يستبدل كل صفوف الفرع بالنتائج الجديدة (upsert ذرّي لكل فرع).</summary>
-    private async Task UpsertBranchAsync(string branchId, string storeName, List<ProductInfo> products, CancellationToken ct)
+    private async Task UpsertBranchAsync(string branchId, string storeName, double? lat, double? lng,
+        List<ProductInfo> products, CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SallimniDbContext>();
@@ -130,6 +131,8 @@ public class TalabatIndexService : BackgroundService
                 InStock    = p.InStock,
                 ImageUrl   = p.ImageUrl,
                 ProductUrl = p.ProductUrl,
+                Latitude   = lat,
+                Longitude  = lng,
                 UpdatedAt  = now,
             });
         }

@@ -127,6 +127,11 @@
                                         </BoxView.Triggers>
                                     </BoxView>
                                     <Label Text="{Binding AvailabilityText}" FontSize="12" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
+                                    <Label Text="•" FontSize="12" TextColor="{StaticResource Gray300}" VerticalOptions="Center"
+                                           IsVisible="{Binding HasDistance}" />
+                                    <Label Text="{Binding DistanceText}" FontSize="12" FontAttributes="Bold"
+                                           TextColor="{StaticResource Accent}" VerticalOptions="Center"
+                                           IsVisible="{Binding HasDistance}" />
                                 </HorizontalStackLayout>
                             </VerticalStackLayout>
                         </Grid>
