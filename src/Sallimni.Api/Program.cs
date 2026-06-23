@@ -5,6 +5,7 @@ using Sallimni.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddMemoryCache(); // تخزين مؤقّت لنتائج فحص السعر (تسريع المسح المكرّر)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

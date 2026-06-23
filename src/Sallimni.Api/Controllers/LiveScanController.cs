@@ -1,6 +1,7 @@
 using JordanGrocery;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Sallimni.Infrastructure;
 
 namespace Sallimni.Api.Controllers;
@@ -17,11 +18,16 @@ public class LiveScanController : ControllerBase
 {
     private readonly GroceryAggregator _agg;
     private readonly SallimniDbContext _db;
+    private readonly IMemoryCache _cache;
 
-    public LiveScanController(GroceryAggregator agg, SallimniDbContext db)
+    // مدّة تخزين نتيجة المسح — تسريع الاستعلامات المكرّرة (تسعيرة البقالة لا تتغيّر بالدقائق).
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
+
+    public LiveScanController(GroceryAggregator agg, SallimniDbContext db, IMemoryCache cache)
     {
         _agg = agg;
         _db = db;
+        _cache = cache;
     }
 
     public record LiveScanResult(
@@ -33,6 +39,11 @@ public class LiveScanController : ControllerBase
     {
         barcode = (barcode ?? "").Trim();
         if (barcode.Length == 0) return BadRequest(new { error = "باركود فارغ." });
+
+        // تسريع: أعِد النتيجة المخزّنة فورًا إن وُجدت.
+        var cacheKey = "scan:" + barcode;
+        if (_cache.TryGetValue(cacheKey, out object? cachedPayload))
+            return Ok(cachedPayload);
 
         // طلبات: قراءة فوريّة من الفهرس المُحدَّث دوريًّا.
         var indexedTask = _db.TalabatPriceIndex
@@ -58,7 +69,9 @@ public class LiveScanController : ControllerBase
         var talabatStores = await _db.TalabatPriceIndex.Select(e => e.BranchId).Distinct().CountAsync(ct);
         var storesQueried = _agg.StoreNames.Count + talabatStores;
 
-        return Ok(new { barcode, timedOut = liveTimedOut, storesQueried, count = results.Count, results });
+        var payload = new { barcode, timedOut = liveTimedOut, storesQueried, count = results.Count, results };
+        if (!liveTimedOut) _cache.Set(cacheKey, payload, CacheTtl); // لا نخزّن نتيجة ناقصة بسبب المهلة
+        return Ok(payload);
     }
 
     /// <summary>حالة فهرسة متاجر طلبات: كم متجر، كم منتج، وآخر تحديث لكل متجر (لمتابعة التقدّم).</summary>

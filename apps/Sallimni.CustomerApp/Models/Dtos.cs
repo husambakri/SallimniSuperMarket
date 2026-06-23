@@ -109,6 +109,13 @@ public class LiveScanDto
     public bool HasSpecial => Special > 0 && Special < Price;
     public bool HasImage => !string.IsNullOrEmpty(ImageUrl);
     public string Glyph => "🏪";
+
+    // مشتقّات العرض (تُضبط في ViewModel) — لتمييز الأرخص واللمسات الاحترافية.
+    public bool IsCheapest { get; set; }
+    public string? Note { get; set; }                       // مثل: "وفّر 0.10 د.أ"
+    public bool HasNote => !string.IsNullOrEmpty(Note);
+    public string AvailabilityText => InStock ? "متوفّر" : "غير متوفّر";
+    public double RowOpacity => InStock ? 1.0 : 0.55;       // تعتيم غير المتوفّر
 }
 
 public class CustomerDto

@@ -97,7 +97,23 @@ public partial class ScanViewModel : BaseViewModel
         try
         {
             var resp = await _api.ScanCompareAsync(code);
-            foreach (var r in resp.Results) CompareResults.Add(r);
+            var list = resp.Results;
+
+            // الأرخص = أقلّ سعر فعلي بين المتوفّر (وإلا أوّل نتيجة) — يُميَّز ويُحسب توفيره.
+            var cheapest = list.Where(r => r.InStock).OrderBy(r => r.EffectivePrice).FirstOrDefault()
+                           ?? list.FirstOrDefault();
+            if (cheapest is not null)
+            {
+                cheapest.IsCheapest = true;
+                if (list.Count > 1)
+                {
+                    var maxEff = list.Max(r => r.EffectivePrice);
+                    var save = maxEff - cheapest.EffectivePrice;
+                    if (save > 0) cheapest.Note = $"وفّر {save:0.00} د.أ";
+                }
+            }
+
+            foreach (var r in list) CompareResults.Add(r);
         }
         catch { /* ميزة تجريبية — نتجاهل الأخطاء */ }
         finally { IsComparing = false; HasCompared = true; }
