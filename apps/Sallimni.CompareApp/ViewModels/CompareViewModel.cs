@@ -37,8 +37,10 @@ public partial class CompareViewModel : ObservableObject
     [ObservableProperty] private bool _hasSavings;
     [ObservableProperty] private string? _distanceText;
     [ObservableProperty] private bool _hasDistance;
+    [ObservableProperty] private bool _hasMapLocation;   // إحداثيات المتجر متاحة لفتح الخريطة
 
-    private Location? _userLocation; // موقع المستخدم (يُجلب مرّة ويُخزَّن).
+    private Location? _userLocation;        // موقع المستخدم (يُجلب مرّة ويُخزَّن).
+    private double? _storeLat, _storeLng;   // إحداثيات أقرب فرع للمتجر الأرخص (لفتح الخريطة).
 
     /// <summary>تشغيل/إيقاف مسح الكاميرا (يطلب الإذن عند التشغيل).</summary>
     [RelayCommand]
@@ -84,6 +86,8 @@ public partial class CompareViewModel : ObservableObject
         SavingsText = null;
         HasDistance = false;
         DistanceText = null;
+        HasMapLocation = false;
+        _storeLat = _storeLng = null;
 
         try
         {
@@ -105,6 +109,9 @@ public partial class CompareViewModel : ObservableObject
                 StoreName = cheapest.Store;
                 InStock = cheapest.InStock;
                 AvailabilityText = cheapest.AvailabilityText;
+                _storeLat = cheapest.Latitude;
+                _storeLng = cheapest.Longitude;
+                HasMapLocation = cheapest.HasLocation;
                 HasProduct = true;
 
                 if (list.Count > 1)
@@ -132,6 +139,18 @@ public partial class CompareViewModel : ObservableObject
             IsBusy = false;
             HasCompared = true;
         }
+    }
+
+    /// <summary>يفتح موقع المتجر (أقرب فرع) في خرائط جوجل عند النقر على البطاقة.</summary>
+    [RelayCommand]
+    private async Task OpenMapAsync()
+    {
+        if (_storeLat is null || _storeLng is null) return;
+        var lat = _storeLat.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var lng = _storeLng.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        // رابط خرائط جوجل القياسي — يفتح التطبيق إن وُجد، وإلّا المتصفّح.
+        var url = $"https://www.google.com/maps/search/?api=1&query={lat},{lng}";
+        try { await Launcher.OpenAsync(url); } catch { /* تجاهُل إن تعذّر الفتح */ }
     }
 
     /// <summary>يحسب كم يبعد المتجر الأرخص عن المستخدم ويضبط نصّ المسافة (best-effort).</summary>
