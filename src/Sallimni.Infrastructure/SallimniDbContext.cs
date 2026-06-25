@@ -16,6 +16,7 @@ public class SallimniDbContext : DbContext
     public DbSet<BarcodeScan> BarcodeScans => Set<BarcodeScan>();
     public DbSet<TalabatPriceEntry> TalabatPriceIndex => Set<TalabatPriceEntry>();
     public DbSet<StoreBranch> StoreBranches => Set<StoreBranch>();
+    public DbSet<PriceValidation> PriceValidations => Set<PriceValidation>();
 
     // الأطراف
     public DbSet<Merchant> Merchants => Set<Merchant>();

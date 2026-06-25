@@ -38,6 +38,17 @@ public class TalabatPriceEntryConfig : IEntityTypeConfiguration<TalabatPriceEntr
     }
 }
 
+public class PriceValidationConfig : IEntityTypeConfiguration<PriceValidation>
+{
+    public void Configure(EntityTypeBuilder<PriceValidation> b)
+    {
+        // سجلّ تاريخي: استعلام السجلّ لكل فرع مرتّباً بالأحدث؛ والبحث بالباركود.
+        b.HasIndex(v => new { v.MerchantId, v.CreatedAt });
+        b.HasIndex(v => v.Barcode);
+        // بلا مفتاح أجنبي على MerchantId عمداً — التاريخ يصمد لو حُذف التاجر (لقطات محفوظة).
+    }
+}
+
 public class MerchantProductConfig : IEntityTypeConfiguration<MerchantProduct>
 {
     public void Configure(EntityTypeBuilder<MerchantProduct> b)

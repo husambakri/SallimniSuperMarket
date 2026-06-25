@@ -38,3 +38,27 @@ public record UnfulfilledDto(Guid ProductId, int Quantity, string Reason);
 
 // ===== الإدارة =====
 public record CommissionConfigDto(decimal DefaultRate);
+
+// ===== تحقّق الأسعار الميداني (validation) =====
+
+/// <summary>نتيجة استعلام المسح: أقرب فرع للموقع + سعرنا المخزّن للباركود في ذلك الفرع.</summary>
+public record ValidationLookupDto(
+    bool BranchFound, Guid? MerchantId, string? MerchantName, string? BranchId, double? DistanceKm,
+    bool ProductFound, Guid? ProductId, string? ProductName,
+    bool HasOurPrice, decimal? ExpectedPrice);
+
+/// <summary>طلب تسجيل تحقّق (يضيف صفّاً تاريخياً append-only؛ لا يلمس السعر الحيّ).</summary>
+public record ValidationRecordRequest(
+    Guid MerchantId, string MerchantName, string? BranchId,
+    Guid? ProductId, string Barcode, string? ProductName,
+    decimal? ExpectedPrice, decimal ActualPrice,
+    double? Latitude, double? Longitude, string? Auditor);
+
+/// <summary>فرع ظهر في سجلّ التحقّق (لمنتقي صفحة السجلّ).</summary>
+public record ValidationBranchDto(Guid MerchantId, string MerchantName, int Count, DateTimeOffset LastAt);
+
+/// <summary>صفّ في سجلّ تحقّقات فرع.</summary>
+public record ValidationHistoryDto(
+    Guid Id, string Barcode, string? ProductName,
+    decimal? ExpectedPrice, decimal ActualPrice, bool IsMatch,
+    string? Auditor, DateTimeOffset CreatedAt);

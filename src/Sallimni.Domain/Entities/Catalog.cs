@@ -140,3 +140,31 @@ public class StoreBranch : BaseEntity
     /// <summary>مصدر الصفّ: "talabat" (اكتشاف) أو "independent" (متاجر مستقلّة) — كل مصدر يحدّث صفوفه فقط.</summary>
     public string Source        { get; set; } = "talabat";
 }
+
+/// <summary>
+/// سجلّ تحقّق سعر ميداني (append-only): كل عملية مسح من تطبيق validation تولّد صفّاً ثابتاً
+/// لا يُعدّل ولا يُمسح. يحفظ لقطة (السعر المخزّن عندنا وقت الفحص مقابل السعر الحقيقي الذي
+/// رصده العامل) فيعطي تاريخاً كاملاً بكلفة صفّ صغير لكل فحص — دون لمس السعر الحيّ.
+/// MerchantId مجرّد معرّف مفهرس بلا مفتاح أجنبي حتى يبقى التاريخ سليماً لو حُذف التاجر.
+/// </summary>
+public class PriceValidation : BaseEntity
+{
+    public Guid MerchantId      { get; set; }            // الفرع (تاجر سلّمني) الذي رُصد فيه
+    public string MerchantName  { get; set; } = string.Empty; // لقطة اسم الفرع وقت الفحص
+    public string? BranchId     { get; set; }            // لقطة معرّف الفرع الخارجي إن وُجد
+
+    public Guid? ProductId      { get; set; }            // الصنف المطابق للباركود (إن وُجد)
+    public string Barcode       { get; set; } = string.Empty;
+    public string? ProductName  { get; set; }            // لقطة اسم الصنف وقت الفحص
+
+    /// <summary>السعر المخزّن عندنا للفرع وقت الفحص (null إن لم يكن للصنف سعر في هذا الفرع).</summary>
+    public decimal? ExpectedPrice { get; set; }
+    /// <summary>السعر الحقيقي الذي أكّده/أدخله العامل.</summary>
+    public decimal ActualPrice  { get; set; }
+    /// <summary>هل طابق المخزّن الواقع؟ (يُحسب وقت الفحص).</summary>
+    public bool IsMatch         { get; set; }
+
+    public double? Latitude     { get; set; }            // موقع العامل وقت الفحص
+    public double? Longitude    { get; set; }
+    public string? Auditor      { get; set; }            // اسم/جهاز العامل (اختياري)
+}

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Sallimni.ValidationApp.ViewModels"
+             xmlns:m="clr-namespace:Sallimni.ValidationApp.Models"
+             x:Class="Sallimni.ValidationApp.Views.HistoryPage"
+             x:DataType="vm:HistoryViewModel"
+             FlowDirection="RightToLeft"
+             BackgroundColor="{StaticResource PageBg}"
+             Title="السجلّ">
+
+    <Grid Padding="16,12,16,14" RowSpacing="10" RowDefinitions="Auto,Auto,Auto,*">
+
+        <!-- الترويسة -->
+        <VerticalStackLayout Grid.Row="0" Spacing="1">
+            <Label Text="سجلّ التحقّق" FontSize="21" FontAttributes="Bold" TextColor="{StaticResource Primary}" />
+            <Label Text="اختر الفرع لعرض ما رصدته فيه" FontSize="12" TextColor="{StaticResource Gray500}" />
+        </VerticalStackLayout>
+
+        <!-- منتقي الفرع -->
+        <Border Grid.Row="1" Stroke="{StaticResource Gray200}" StrokeThickness="1" StrokeShape="RoundRectangle 22"
+                BackgroundColor="{StaticResource Surface}" Padding="12,2">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                <Label Grid.Column="0" Text="🏪" FontSize="15" VerticalOptions="Center" />
+                <Picker Grid.Column="1" Title="اختر الفرع…" ItemsSource="{Binding Branches}"
+                        ItemDisplayBinding="{Binding Display}" SelectedItem="{Binding SelectedBranch}"
+                        FontSize="14" BackgroundColor="Transparent" />
+                <Button Grid.Column="2" Text="↻" Command="{Binding LoadBranchesCommand}"
+                        BackgroundColor="Transparent" TextColor="{StaticResource Primary}"
+                        FontSize="18" FontAttributes="Bold" Padding="8,0" />
+            </Grid>
+        </Border>
+
+        <!-- خطأ/فراغ -->
+        <Label Grid.Row="2" IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}"
+               FontSize="13" TextColor="{StaticResource Gray500}" HorizontalTextAlignment="Center" Margin="0,4" />
+
+        <!-- السجلّ -->
+        <Grid Grid.Row="3">
+            <CollectionView ItemsSource="{Binding Records}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="m:ValidationHistoryDto">
+                        <Border StrokeShape="RoundRectangle 16" StrokeThickness="1" Stroke="{StaticResource Gray100}"
+                                BackgroundColor="{StaticResource Surface}" Padding="14,12" Margin="0,0,0,9">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Grid.Column="0" Spacing="3">
+                                    <Label Text="{Binding Title}" FontSize="14.5" FontAttributes="Bold"
+                                           TextColor="{StaticResource Gray900}" MaxLines="1" LineBreakMode="TailTruncation" />
+                                    <HorizontalStackLayout Spacing="10">
+                                        <Label Text="{Binding ExpectedText}" FontSize="12" TextColor="{StaticResource Gray500}" />
+                                        <Label Text="{Binding ActualText}" FontSize="12" FontAttributes="Bold" TextColor="{StaticResource Gray900}" />
+                                    </HorizontalStackLayout>
+                                    <Label Text="{Binding WhenText}" FontSize="11" TextColor="{StaticResource Gray400}" />
+                                </VerticalStackLayout>
+                                <Border Grid.Column="1" StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                                        BackgroundColor="{Binding StatusColor}" Padding="10,6" VerticalOptions="Center">
+                                    <HorizontalStackLayout Spacing="4">
+                                        <Label Text="{Binding StatusGlyph}" FontSize="12" FontAttributes="Bold" TextColor="White" />
+                                        <Label Text="{Binding StatusText}" FontSize="12" FontAttributes="Bold" TextColor="White" />
+                                    </HorizontalStackLayout>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!-- فراغ -->
+            <VerticalStackLayout IsVisible="{Binding IsEmpty}" VerticalOptions="Center" HorizontalOptions="Center" Spacing="8">
+                <Label Text="🗂️" FontSize="44" HorizontalOptions="Center" Opacity="0.5" />
+                <Label Text="لا تحقّقات في هذا الفرع بعد" FontSize="13" TextColor="{StaticResource Gray400}" />
+            </VerticalStackLayout>
+
+            <!-- انتظار -->
+            <ActivityIndicator IsVisible="{Binding IsBusy}" IsRunning="{Binding IsBusy}"
+                               Color="{StaticResource Primary}" VerticalOptions="Start" HorizontalOptions="Center" Margin="0,20,0,0" />
+        </Grid>
+    </Grid>
+</ContentPage>

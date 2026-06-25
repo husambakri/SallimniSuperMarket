@@ -1,0 +1,143 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Sallimni.Api.Dtos;
+using Sallimni.Application.Services;
+using Sallimni.Domain.Entities;
+using Sallimni.Infrastructure;
+
+namespace Sallimni.Api.Controllers;
+
+/// <summary>
+/// تحقّق السعر الميداني (تطبيق validation): يطابق موقع العامل بأقرب فرع لتجّار سلّمني،
+/// يعطيه سعرنا المخزّن للباركود في ذلك الفرع، ويسجّل ما رصده كصفّ تاريخي append-only
+/// (لا يلمس السعر الحيّ في MerchantProduct).
+/// </summary>
+[ApiController]
+[Route("api/validation")]
+public class ValidationController : ControllerBase
+{
+    private readonly SallimniDbContext _db;
+
+    public ValidationController(SallimniDbContext db) => _db = db;
+
+    /// <summary>
+    /// أقرب فرع لموقع العامل + سعرنا المخزّن للباركود فيه. الموقع مطلوب لتحديد الفرع.
+    /// </summary>
+    [HttpGet("lookup")]
+    public async Task<IActionResult> Lookup(
+        [FromQuery] string? barcode, [FromQuery] double? lat, [FromQuery] double? lng, CancellationToken ct)
+    {
+        barcode = (barcode ?? "").Trim();
+        if (barcode.Length == 0) return BadRequest(new { error = "باركود فارغ." });
+        if (lat is null || lng is null) return BadRequest(new { error = "الموقع مطلوب لتحديد الفرع." });
+
+        // أقرب فرع: تاجر فعّال له إحداثيات، الأقرب لموقع العامل (Haversine).
+        var merchants = await _db.Merchants
+            .Where(m => m.IsActive && m.Latitude != null && m.Longitude != null)
+            .Select(m => new { m.Id, m.Name, m.BranchId, m.Latitude, m.Longitude })
+            .ToListAsync(ct);
+
+        var me = new GeoPoint(lat.Value, lng.Value);
+        var nearest = merchants
+            .Select(m => new { m, km = GeoUtils.DistanceKm(me, new GeoPoint(m.Latitude!.Value, m.Longitude!.Value)) })
+            .OrderBy(x => x.km)
+            .FirstOrDefault();
+
+        if (nearest is null)
+            return Ok(new ValidationLookupDto(false, null, null, null, null, false, null, null, false, null));
+
+        // الصنف المطابق للباركود (بطاقة الإدارة).
+        var product = await _db.Products
+            .Where(p => p.Barcode == barcode && p.IsActive)
+            .Select(p => new { p.Id, p.NameAr })
+            .FirstOrDefaultAsync(ct);
+
+        decimal? expected = null;
+        if (product is not null)
+        {
+            // سعرنا المخزّن لهذا الصنف في هذا الفرع تحديداً.
+            expected = await _db.MerchantProducts
+                .Where(mp => mp.MerchantId == nearest.m.Id && mp.ProductId == product.Id)
+                .Select(mp => (decimal?)mp.Price)
+                .FirstOrDefaultAsync(ct);
+        }
+
+        return Ok(new ValidationLookupDto(
+            BranchFound: true,
+            MerchantId: nearest.m.Id,
+            MerchantName: nearest.m.Name,
+            BranchId: nearest.m.BranchId,
+            DistanceKm: Math.Round(nearest.km, 3),
+            ProductFound: product is not null,
+            ProductId: product?.Id,
+            ProductName: product?.NameAr,
+            HasOurPrice: expected.HasValue,
+            ExpectedPrice: expected));
+    }
+
+    /// <summary>
+    /// يسجّل عملية تحقّق كصفّ تاريخي ثابت. التطابق يُحسب على الخادم: مطابق فقط إن كان لنا
+    /// سعر مخزّن وساوى الواقع. لا يُعدّل أي صفّ قائم ولا يمسّ MerchantProduct.
+    /// </summary>
+    [HttpPost("record")]
+    public async Task<IActionResult> Record([FromBody] ValidationRecordRequest req, CancellationToken ct)
+    {
+        var barcode = (req.Barcode ?? "").Trim();
+        if (barcode.Length == 0) return BadRequest(new { error = "باركود فارغ." });
+        if (req.MerchantId == Guid.Empty) return BadRequest(new { error = "الفرع مطلوب." });
+
+        var isMatch = req.ExpectedPrice.HasValue && req.ExpectedPrice.Value == req.ActualPrice;
+
+        var row = new PriceValidation
+        {
+            MerchantId    = req.MerchantId,
+            MerchantName  = req.MerchantName ?? "",
+            BranchId      = req.BranchId,
+            ProductId     = req.ProductId,
+            Barcode       = barcode,
+            ProductName   = req.ProductName,
+            ExpectedPrice = req.ExpectedPrice,
+            ActualPrice   = req.ActualPrice,
+            IsMatch       = isMatch,
+            Latitude      = req.Latitude,
+            Longitude     = req.Longitude,
+            Auditor       = req.Auditor,
+        };
+        _db.PriceValidations.Add(row);
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(new { ok = true, id = row.Id, isMatch });
+    }
+
+    /// <summary>الفروع التي ظهرت في سجلّ التحقّق (لمنتقي صفحة السجلّ) — الأحدث نشاطاً أولاً.</summary>
+    [HttpGet("branches")]
+    public async Task<IActionResult> Branches(CancellationToken ct)
+    {
+        var branches = await _db.PriceValidations
+            .GroupBy(v => new { v.MerchantId, v.MerchantName })
+            .Select(g => new ValidationBranchDto(
+                g.Key.MerchantId, g.Key.MerchantName, g.Count(), g.Max(x => x.CreatedAt)))
+            .OrderByDescending(b => b.LastAt)
+            .ToListAsync(ct);
+
+        return Ok(branches);
+    }
+
+    /// <summary>سجلّ تحقّقات فرع واحد، الأحدث أولاً.</summary>
+    [HttpGet("history")]
+    public async Task<IActionResult> History([FromQuery] Guid merchantId, CancellationToken ct)
+    {
+        if (merchantId == Guid.Empty) return BadRequest(new { error = "الفرع مطلوب." });
+
+        var rows = await _db.PriceValidations
+            .Where(v => v.MerchantId == merchantId)
+            .OrderByDescending(v => v.CreatedAt)
+            .Take(500)
+            .Select(v => new ValidationHistoryDto(
+                v.Id, v.Barcode, v.ProductName,
+                v.ExpectedPrice, v.ActualPrice, v.IsMatch, v.Auditor, v.CreatedAt))
+            .ToListAsync(ct);
+
+        return Ok(rows);
+    }
+}
