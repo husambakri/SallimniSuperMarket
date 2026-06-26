@@ -110,24 +110,23 @@
                                TextColor="{StaticResource Gray900}" HorizontalTextAlignment="Center"
                                MaxLines="2" LineBreakMode="TailTruncation" />
 
-                        <!-- سعرنا المخزّن: العادي + العرض (إن وُجد) -->
+                        <!-- سعرنا المخزّن: الفعّال أبرز (العرض إن وُجد، وإلّا العادي) + العادي مشطوبًا عند العرض -->
                         <VerticalStackLayout Spacing="7" HorizontalOptions="Center" IsVisible="{Binding HasOurPrice}">
                             <Label Text="سعرنا المخزّن في هذا الفرع" FontSize="11.5" TextColor="{StaticResource Gray500}" HorizontalOptions="Center" />
-                            <!-- العادي -->
-                            <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
-                                <Label Text="العادي" FontSize="12.5" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
-                                <Label Text="{Binding ExpectedPriceText}" FontSize="28" FontAttributes="Bold" TextColor="{StaticResource Gray900}" />
-                                <Label Text="د.أ" FontSize="12.5" TextColor="{StaticResource Gray500}" VerticalOptions="End" Margin="0,0,0,5" />
+                            <!-- السعر الفعّال (الأبرز): شارة عرض تظهر فقط عند وجوده -->
+                            <HorizontalStackLayout Spacing="6" HorizontalOptions="Center" VerticalOptions="Center">
+                                <Label IsVisible="{Binding HasOffer}" Text="🏷️ عرض" FontSize="12.5" FontAttributes="Bold"
+                                       TextColor="{StaticResource Accent}" VerticalOptions="Center" />
+                                <Label Text="{Binding EffectivePriceText}" FontSize="30" FontAttributes="Bold" TextColor="{StaticResource Gray900}" />
+                                <Label Text="د.أ" FontSize="12.5" TextColor="{StaticResource Gray500}" VerticalOptions="End" Margin="0,0,0,6" />
                             </HorizontalStackLayout>
-                            <!-- العرض -->
-                            <Border IsVisible="{Binding HasOffer}" BackgroundColor="{StaticResource Accent}" StrokeThickness="0"
-                                    StrokeShape="RoundRectangle 16" Padding="14,7" HorizontalOptions="Center">
-                                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
-                                    <Label Text="🏷️ عرض" FontSize="12.5" FontAttributes="Bold" TextColor="White" VerticalOptions="Center" />
-                                    <Label Text="{Binding SpecialPriceText}" FontSize="24" FontAttributes="Bold" TextColor="White" />
-                                    <Label Text="د.أ" FontSize="11.5" TextColor="White" VerticalOptions="End" Margin="0,0,0,3" />
-                                </HorizontalStackLayout>
-                            </Border>
+                            <!-- السعر العادي مشطوبًا (يظهر فقط عند وجود عرض) -->
+                            <HorizontalStackLayout IsVisible="{Binding HasOffer}" Spacing="6" HorizontalOptions="Center" VerticalOptions="Center">
+                                <Label Text="العادي" FontSize="11.5" TextColor="{StaticResource Gray400}" VerticalOptions="Center" />
+                                <Label Text="{Binding ExpectedPriceText}" FontSize="14" TextColor="{StaticResource Gray400}"
+                                       TextDecorations="Strikethrough" VerticalOptions="Center" />
+                                <Label Text="د.أ" FontSize="10" TextColor="{StaticResource Gray400}" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
                         </VerticalStackLayout>
 
                         <Label IsVisible="{Binding HasNoOurPrice}"

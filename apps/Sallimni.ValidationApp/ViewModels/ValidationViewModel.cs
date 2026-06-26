@@ -58,6 +58,7 @@ public partial class ValidationViewModel : ObservableObject
     [ObservableProperty] private string? _expectedPriceText;      // العادي
     [ObservableProperty] private bool _hasOffer;                  // فيه سعر عرض؟
     [ObservableProperty] private string? _specialPriceText;       // العرض
+    [ObservableProperty] private string? _effectivePriceText;     // الفعّال (العرض إن وُجد، وإلّا العادي)
     [ObservableProperty] private string _actualPriceInput = "";
 
     private ValidationLookupDto? _lookup;
@@ -155,6 +156,7 @@ public partial class ValidationViewModel : ObservableObject
             HasOffer = res.HasOffer;
             ExpectedPriceText = res.ExpectedPriceText;     // السعر العادي
             SpecialPriceText = res.SpecialPriceText;        // سعر العرض
+            EffectivePriceText = res.EffectivePriceText;    // الفعّال (الأبرز في البطاقة)
             // نملأ الحقل بالسعر الفعّال (العرض إن وُجد، وإلّا العادي): إن طابق الرف يكبس تأكيد فقط.
             ActualPriceInput = res.HasOurPrice ? res.EffectivePrice!.Value.ToString("0.00", CultureInfo.InvariantCulture) : "";
             HasLookup = true;

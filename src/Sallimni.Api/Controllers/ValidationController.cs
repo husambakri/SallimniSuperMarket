@@ -129,12 +129,23 @@ public class ValidationController : ControllerBase
     [HttpGet("branches")]
     public async Task<IActionResult> Branches(CancellationToken ct)
     {
-        var branches = await _db.PriceValidations
+        // GROUP BY + التجميعات في SQL عبر نوع مجهول (EF لا يترجم الإسقاط مباشرةً إلى مُنشئ record)،
+        // ثم الترتيب وبناء الـ DTO في الذاكرة — عدد الفروع صغير.
+        var grouped = await _db.PriceValidations
             .GroupBy(v => new { v.MerchantId, v.MerchantName })
-            .Select(g => new ValidationBranchDto(
-                g.Key.MerchantId, g.Key.MerchantName, g.Count(), g.Max(x => x.CreatedAt)))
-            .OrderByDescending(b => b.LastAt)
+            .Select(g => new
+            {
+                g.Key.MerchantId,
+                g.Key.MerchantName,
+                Count = g.Count(),
+                LastAt = g.Max(x => x.CreatedAt),
+            })
             .ToListAsync(ct);
+
+        var branches = grouped
+            .OrderByDescending(b => b.LastAt)
+            .Select(b => new ValidationBranchDto(b.MerchantId, b.MerchantName, b.Count, b.LastAt))
+            .ToList();
 
         return Ok(branches);
     }
