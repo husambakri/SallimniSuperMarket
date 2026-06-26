@@ -4,6 +4,14 @@ namespace Sallimni.ValidationApp.Models;
 
 // نماذج مطابقة لنقاط /api/validation في الخادم.
 
+/// <summary>متجر في قائمة الاختيار (ترويسة المسح).</summary>
+public class ValidationMerchantDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+    public override string ToString() => Name;
+}
+
 /// <summary>نتيجة استعلام المسح: أقرب فرع للموقع + سعرنا المخزّن للباركود فيه.</summary>
 public class ValidationLookupDto
 {

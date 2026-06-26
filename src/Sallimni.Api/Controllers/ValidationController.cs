@@ -1,15 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Sallimni.Api.Dtos;
-using Sallimni.Application.Services;
 using Sallimni.Domain.Entities;
 using Sallimni.Infrastructure;
 
 namespace Sallimni.Api.Controllers;
 
 /// <summary>
-/// تحقّق السعر الميداني (تطبيق validation): يطابق موقع العامل بأقرب فرع لتجّار سلّمني،
-/// يعطيه سعرنا المخزّن للباركود في ذلك الفرع، ويسجّل ما رصده كصفّ تاريخي append-only
+/// تحقّق السعر الميداني (تطبيق validation): العامل يختار الفرع من قائمة، فيعطيه سعرنا
+/// المخزّن للباركود في ذلك الفرع، ويسجّل ما رصده كصفّ تاريخي append-only
 /// (لا يلمس السعر الحيّ في MerchantProduct).
 /// </summary>
 [ApiController]
@@ -20,30 +19,35 @@ public class ValidationController : ControllerBase
 
     public ValidationController(SallimniDbContext db) => _db = db;
 
+    /// <summary>قائمة المتاجر الفعّالة (تُثبَّت في ترويسة المسح ليختار العامل الفرع).</summary>
+    [HttpGet("merchants")]
+    public async Task<IActionResult> MerchantList(CancellationToken ct)
+    {
+        var list = await _db.Merchants
+            .Where(m => m.IsActive)
+            .OrderBy(m => m.Name)
+            .Select(m => new ValidationMerchantDto(m.Id, m.Name))
+            .ToListAsync(ct);
+        return Ok(list);
+    }
+
     /// <summary>
-    /// أقرب فرع لموقع العامل + سعرنا المخزّن للباركود فيه. الموقع مطلوب لتحديد الفرع.
+    /// سعرنا المخزّن للباركود في الفرع الذي اختاره العامل. الفرع (merchantId) مطلوب.
     /// </summary>
     [HttpGet("lookup")]
     public async Task<IActionResult> Lookup(
-        [FromQuery] string? barcode, [FromQuery] double? lat, [FromQuery] double? lng, CancellationToken ct)
+        [FromQuery] string? barcode, [FromQuery] Guid merchantId, CancellationToken ct)
     {
         barcode = (barcode ?? "").Trim();
         if (barcode.Length == 0) return BadRequest(new { error = "باركود فارغ." });
-        if (lat is null || lng is null) return BadRequest(new { error = "الموقع مطلوب لتحديد الفرع." });
+        if (merchantId == Guid.Empty) return BadRequest(new { error = "اختر المتجر أولاً." });
 
-        // أقرب فرع: تاجر فعّال له إحداثيات، الأقرب لموقع العامل (Haversine).
-        var merchants = await _db.Merchants
-            .Where(m => m.IsActive && m.Latitude != null && m.Longitude != null)
-            .Select(m => new { m.Id, m.Name, m.BranchId, m.Latitude, m.Longitude })
-            .ToListAsync(ct);
+        var merchant = await _db.Merchants
+            .Where(m => m.Id == merchantId)
+            .Select(m => new { m.Id, m.Name, m.BranchId })
+            .FirstOrDefaultAsync(ct);
 
-        var me = new GeoPoint(lat.Value, lng.Value);
-        var nearest = merchants
-            .Select(m => new { m, km = GeoUtils.DistanceKm(me, new GeoPoint(m.Latitude!.Value, m.Longitude!.Value)) })
-            .OrderBy(x => x.km)
-            .FirstOrDefault();
-
-        if (nearest is null)
+        if (merchant is null)
             return Ok(new ValidationLookupDto(false, null, null, null, null, false, null, null, false, null));
 
         // الصنف المطابق للباركود (بطاقة الإدارة).
@@ -57,17 +61,17 @@ public class ValidationController : ControllerBase
         {
             // سعرنا المخزّن لهذا الصنف في هذا الفرع تحديداً.
             expected = await _db.MerchantProducts
-                .Where(mp => mp.MerchantId == nearest.m.Id && mp.ProductId == product.Id)
+                .Where(mp => mp.MerchantId == merchant.Id && mp.ProductId == product.Id)
                 .Select(mp => (decimal?)mp.Price)
                 .FirstOrDefaultAsync(ct);
         }
 
         return Ok(new ValidationLookupDto(
             BranchFound: true,
-            MerchantId: nearest.m.Id,
-            MerchantName: nearest.m.Name,
-            BranchId: nearest.m.BranchId,
-            DistanceKm: Math.Round(nearest.km, 3),
+            MerchantId: merchant.Id,
+            MerchantName: merchant.Name,
+            BranchId: merchant.BranchId,
+            DistanceKm: null,
             ProductFound: product is not null,
             ProductId: product?.Id,
             ProductName: product?.NameAr,

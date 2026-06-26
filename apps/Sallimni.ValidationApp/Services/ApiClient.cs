@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Sallimni.ValidationApp.Models;
@@ -10,14 +9,18 @@ public class ApiClient
 {
     private readonly HttpClient _http;
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
-    private static string Inv(double v) => v.ToString(CultureInfo.InvariantCulture);
 
     public ApiClient(HttpClient http) => _http = http;
 
-    /// <summary>أقرب فرع للموقع + سعرنا المخزّن للباركود فيه.</summary>
-    public async Task<ValidationLookupDto?> LookupAsync(string code, double lat, double lng, CancellationToken ct = default)
+    /// <summary>قائمة المتاجر لاختيار الفرع.</summary>
+    public async Task<List<ValidationMerchantDto>> MerchantsAsync(CancellationToken ct = default)
+        => await _http.GetFromJsonAsync<List<ValidationMerchantDto>>("api/validation/merchants", JsonOpts, ct)
+           ?? new List<ValidationMerchantDto>();
+
+    /// <summary>سعرنا المخزّن للباركود في الفرع المختار.</summary>
+    public async Task<ValidationLookupDto?> LookupAsync(string code, Guid merchantId, CancellationToken ct = default)
     {
-        var url = $"api/validation/lookup?barcode={Uri.EscapeDataString(code)}&lat={Inv(lat)}&lng={Inv(lng)}";
+        var url = $"api/validation/lookup?barcode={Uri.EscapeDataString(code)}&merchantId={merchantId}";
         return await _http.GetFromJsonAsync<ValidationLookupDto>(url, JsonOpts, ct);
     }
 

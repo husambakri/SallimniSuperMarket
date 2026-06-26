@@ -41,7 +41,10 @@ public record CommissionConfigDto(decimal DefaultRate);
 
 // ===== تحقّق الأسعار الميداني (validation) =====
 
-/// <summary>نتيجة استعلام المسح: أقرب فرع للموقع + سعرنا المخزّن للباركود في ذلك الفرع.</summary>
+/// <summary>متجر في قائمة الاختيار (تُثبَّت في ترويسة المسح).</summary>
+public record ValidationMerchantDto(Guid Id, string Name);
+
+/// <summary>نتيجة استعلام المسح: الفرع المختار + سعرنا المخزّن للباركود في ذلك الفرع.</summary>
 public record ValidationLookupDto(
     bool BranchFound, Guid? MerchantId, string? MerchantName, string? BranchId, double? DistanceKm,
     bool ProductFound, Guid? ProductId, string? ProductName,

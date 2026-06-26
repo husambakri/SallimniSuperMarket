@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -7,9 +8,9 @@ using Sallimni.ValidationApp.Services;
 namespace Sallimni.ValidationApp.ViewModels;
 
 /// <summary>
-/// شاشة المسح: امسح الباركود → نحدّد أقرب فرع من موقعك → نعرض سعرنا المخزّن فيه →
-/// إن طابق اكبس تأكيد، وإن اختلف عدّل القيمة الحقيقية ثم تأكيد. كل تأكيد يسجّل صفّاً
-/// تاريخياً في الخادم (لا يُعدّل السعر الحيّ).
+/// شاشة المسح: العامل يختار الفرع من القائمة المثبّتة في الترويسة، ثم يمسح الباركود →
+/// نعرض سعرنا المخزّن في ذلك الفرع. إن طابق اكبس تأكيد، وإن اختلف عدّل القيمة الحقيقية
+/// ثم تأكيد. كل تأكيد يسجّل صفّاً تاريخياً (لا يُعدّل السعر الحيّ). الموقع يُلتقط للسجلّ فقط.
 /// </summary>
 public partial class ValidationViewModel : ObservableObject
 {
@@ -19,7 +20,19 @@ public partial class ValidationViewModel : ObservableObject
     {
         _api = api;
         _auditor = Preferences.Get("auditor", "");
+        _ = LoadMerchantsAsync();
     }
+
+    // ===== ترويسة: اختيار الفرع =====
+    public ObservableCollection<ValidationMerchantDto> Merchants { get; } = new();
+
+    [ObservableProperty] private ValidationMerchantDto? _selectedMerchant;
+    partial void OnSelectedMerchantChanged(ValidationMerchantDto? value)
+    {
+        if (value is not null) Preferences.Set("merchantId", value.Id.ToString());
+        OnPropertyChanged(nameof(HasSelectedMerchant));
+    }
+    public bool HasSelectedMerchant => SelectedMerchant is not null;
 
     [ObservableProperty] private string _barcode = "";
     [ObservableProperty] private bool _isScanning;
@@ -38,8 +51,6 @@ public partial class ValidationViewModel : ObservableObject
 
     // بطاقة التحقّق (تظهر بعد المسح الناجح).
     [ObservableProperty] private bool _hasLookup;
-    [ObservableProperty] private string? _branchName;
-    [ObservableProperty] private string? _branchDistanceText;
     [ObservableProperty] private string? _productName;
     [ObservableProperty] private bool _hasOurPrice;
     public bool HasNoOurPrice => !HasOurPrice;
@@ -48,14 +59,39 @@ public partial class ValidationViewModel : ObservableObject
     [ObservableProperty] private string _actualPriceInput = "";
 
     private ValidationLookupDto? _lookup;
-    private double _lat, _lng;
+    private double? _lat, _lng;
 
-    /// <summary>تشغيل/إيقاف مسح الكاميرا (يطلب الإذن عند التشغيل).</summary>
+    /// <summary>يحمّل قائمة المتاجر ويستعيد آخر فرع مختار.</summary>
+    [RelayCommand]
+    private async Task LoadMerchantsAsync()
+    {
+        try
+        {
+            var list = await _api.MerchantsAsync();
+            Merchants.Clear();
+            foreach (var m in list) Merchants.Add(m);
+
+            var savedId = Preferences.Get("merchantId", "");
+            if (Guid.TryParse(savedId, out var id))
+                SelectedMerchant = Merchants.FirstOrDefault(m => m.Id == id);
+        }
+        catch
+        {
+            ErrorMessage = "تعذّر جلب قائمة المتاجر. تحقّق من الاتصال.";
+        }
+    }
+
+    /// <summary>تشغيل/إيقاف مسح الكاميرا (يطلب الإذن، ويتطلّب اختيار فرع أولاً).</summary>
     [RelayCommand]
     private async Task ToggleScanAsync()
     {
         if (!IsScanning)
         {
+            if (SelectedMerchant is null)
+            {
+                ErrorMessage = "اختر المتجر من الأعلى أولاً.";
+                return;
+            }
             var status = await Permissions.RequestAsync<Permissions.Camera>();
             if (status != PermissionStatus.Granted)
             {
@@ -79,12 +115,17 @@ public partial class ValidationViewModel : ObservableObject
         await LookupAsync();
     }
 
-    /// <summary>استعلام الفرع والسعر المخزّن (يدوي أو بعد المسح).</summary>
+    /// <summary>استعلام سعرنا المخزّن للباركود في الفرع المختار (يدوي أو بعد المسح).</summary>
     [RelayCommand]
     private async Task LookupAsync()
     {
         var code = (Barcode ?? "").Trim();
         if (code.Length == 0 || IsBusy) return;
+        if (SelectedMerchant is null)
+        {
+            ErrorMessage = "اختر المتجر من الأعلى أولاً.";
+            return;
+        }
 
         IsBusy = true;
         ErrorMessage = null;
@@ -94,25 +135,19 @@ public partial class ValidationViewModel : ObservableObject
 
         try
         {
+            // الموقع للسجلّ فقط (best-effort) — لا يمنع التحقّق إن تعذّر.
             var me = await GetLocationAsync();
-            if (me is null)
-            {
-                ErrorMessage = "تعذّر تحديد الموقع — فعّل خدمة الموقع لمعرفة الفرع.";
-                return;
-            }
-            _lat = me.Latitude;
-            _lng = me.Longitude;
+            _lat = me?.Latitude;
+            _lng = me?.Longitude;
 
-            var res = await _api.LookupAsync(code, _lat, _lng);
+            var res = await _api.LookupAsync(code, SelectedMerchant.Id);
             if (res is null || !res.BranchFound)
             {
-                ErrorMessage = "لا يوجد فرع لنا قريب من موقعك الحالي.";
+                ErrorMessage = "تعذّر جلب بيانات الفرع. حاول مجددًا.";
                 return;
             }
 
             _lookup = res;
-            BranchName = res.MerchantName;
-            BranchDistanceText = res.DistanceText;
             ProductName = res.ProductFound ? res.ProductName : "صنف غير معروف لنا بهذا الباركود";
             HasOurPrice = res.HasOurPrice;
             ExpectedPriceText = res.ExpectedPriceText;
@@ -134,7 +169,7 @@ public partial class ValidationViewModel : ObservableObject
     [RelayCommand]
     private async Task ConfirmAsync()
     {
-        if (_lookup is null || IsBusy) return;
+        if (_lookup is null || SelectedMerchant is null || IsBusy) return;
 
         var raw = (ActualPriceInput ?? "").Trim().Replace('٫', '.').Replace(',', '.');
         if (!decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var actual) || actual < 0)
@@ -149,8 +184,8 @@ public partial class ValidationViewModel : ObservableObject
         {
             await _api.RecordAsync(new ValidationRecordRequest
             {
-                MerchantId    = _lookup.MerchantId!.Value,
-                MerchantName  = _lookup.MerchantName ?? "",
+                MerchantId    = SelectedMerchant.Id,
+                MerchantName  = SelectedMerchant.Name,
                 BranchId      = _lookup.BranchId,
                 ProductId     = _lookup.ProductId,
                 Barcode       = (Barcode ?? "").Trim(),
@@ -164,7 +199,7 @@ public partial class ValidationViewModel : ObservableObject
 
             var match = _lookup.HasOurPrice && _lookup.ExpectedPrice == actual;
             StatusMessage = match ? "✓ سُجِّل: مطابق" : "✓ سُجِّل: مختلف — حُفظ الواقع";
-            // تجهيز للمسح التالي.
+            // تجهيز للمسح التالي (الفرع المختار يبقى كما هو).
             HasLookup = false;
             _lookup = null;
             Barcode = "";
@@ -179,7 +214,7 @@ public partial class ValidationViewModel : ObservableObject
         }
     }
 
-    /// <summary>يطلب إذن الموقع ويجلب الموقع الحالي (آخر معروف أوّلاً للسرعة).</summary>
+    /// <summary>يجلب الموقع الحالي إن سُمح (للسجلّ فقط) — يتجاهل بصمت عند التعذّر.</summary>
     private async Task<Location?> GetLocationAsync()
     {
         try
@@ -191,7 +226,7 @@ public partial class ValidationViewModel : ObservableObject
 
             return await Geolocation.GetLastKnownLocationAsync()
                 ?? await Geolocation.GetLocationAsync(
-                    new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(8)));
+                    new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(6)));
         }
         catch { return null; }
     }
