@@ -126,6 +126,90 @@ public class MaintenanceController : ControllerBase
         return Accepted(new { ok = true, store = client.StoreName, message = "بدأت إعادة الفهرسة في الخلفية. تحقّق بعد دقائق." });
     }
 
+    /// <summary>
+    /// يفهرس متجر سلّمني من فرعه على طلبات: يسحب الكتالوج (السعر العادي + العرض) ويحدّث
+    /// <c>MerchantProduct.Price</c> و<c>SpecialPrice</c> بمطابقة الباركود — ليظهر السعران في
+    /// تطبيق التحقّق. يعمل في الخلفية. يتطلّب <c>confirm=RUN</c>.
+    /// مثال: <c>?confirm=RUN&amp;merchantId=...&amp;branchId=621347&amp;slug=military-consumer-establishment</c>
+    /// </summary>
+    [HttpPost("index-merchant-talabat")]
+    public IActionResult IndexMerchantFromTalabat(
+        [FromQuery] string? confirm, [FromQuery] Guid merchantId,
+        [FromQuery] string branchId, [FromQuery] string slug, [FromQuery] int areaId = 4809)
+    {
+        if (confirm != "RUN") return BadRequest(new { error = "أضِف ?confirm=RUN للتشغيل." });
+        if (merchantId == Guid.Empty || string.IsNullOrWhiteSpace(branchId) || string.IsNullOrWhiteSpace(slug))
+            return BadRequest(new { error = "merchantId و branchId و slug مطلوبة." });
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<SallimniDbContext>();
+                var merchant = await db.Merchants.FindAsync(merchantId);
+                if (merchant is null) { _logger.LogWarning("[Maintenance] تاجر غير موجود {Id}", merchantId); return; }
+
+                _logger.LogInformation("[Maintenance] فهرسة {Store} من طلبات…", merchant.Name);
+                var client = new TalabatClient(merchant.Name, branchId, slug, areaId);
+                var products = await client.GetAllProductsAsync();
+                if (products.Count == 0) { _logger.LogWarning("[Maintenance] {Store}: 0 منتج من طلبات", merchant.Name); return; }
+
+                // أحدث صفّ لكل باركود (الكتالوج قد يكرّر نفس الباركود).
+                var byBarcode = products
+                    .Where(p => p.Barcode.Length >= 8)
+                    .GroupBy(p => p.Barcode)
+                    .ToDictionary(g => g.Key, g => g.Last());
+                var barcodes = byBarcode.Keys.ToList();
+
+                // الباركود → صنف موجود في كتالوجنا (لا ننشئ أصنافًا جديدة).
+                var prodByBarcode = (await db.Products
+                        .Where(p => p.Barcode != null && barcodes.Contains(p.Barcode))
+                        .Select(p => new { p.Id, p.Barcode })
+                        .ToListAsync())
+                    .GroupBy(p => p.Barcode!)
+                    .ToDictionary(g => g.Key, g => g.First().Id);
+
+                var existing = await db.MerchantProducts
+                    .Where(mp => mp.MerchantId == merchantId)
+                    .ToDictionaryAsync(mp => mp.ProductId, mp => mp);
+
+                var now = DateTimeOffset.UtcNow;
+                int updated = 0, created = 0;
+                foreach (var (barcode, info) in byBarcode)
+                {
+                    if (!prodByBarcode.TryGetValue(barcode, out var productId)) continue;
+                    // info.Price = العادي، info.Special = العرض (0 = لا عرض).
+                    var special = info.Special > 0 && info.Special < info.Price ? (decimal?)info.Special : null;
+                    if (existing.TryGetValue(productId, out var mp))
+                    {
+                        mp.Price = info.Price;
+                        mp.SpecialPrice = special;
+                        mp.IsAvailable = info.InStock;
+                        mp.UpdatedAt = now;
+                        updated++;
+                    }
+                    else
+                    {
+                        db.MerchantProducts.Add(new MerchantProduct
+                        {
+                            MerchantId = merchantId, ProductId = productId,
+                            Price = info.Price, SpecialPrice = special,
+                            StockQty = info.InStock ? 100 : 0, IsAvailable = info.InStock,
+                        });
+                        created++;
+                    }
+                }
+                await db.SaveChangesAsync();
+                _logger.LogInformation("[Maintenance] {Store}: حدّث {U}، أضاف {C} (من {N} باركود طلبات)",
+                    merchant.Name, updated, created, byBarcode.Count);
+            }
+            catch (Exception ex) { _logger.LogError(ex, "[Maintenance] فشل فهرسة التاجر من طلبات"); }
+        });
+
+        return Accepted(new { ok = true, message = "بدأت الفهرسة من طلبات في الخلفية. تحقّق بعد دقائق." });
+    }
+
     public record StoreProductIngest(string Barcode, string Name, decimal Price, decimal Special, bool InStock, string? ImageUrl, string? ProductUrl);
 
     /// <summary>

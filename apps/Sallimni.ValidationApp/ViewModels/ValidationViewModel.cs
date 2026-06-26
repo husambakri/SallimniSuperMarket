@@ -55,7 +55,9 @@ public partial class ValidationViewModel : ObservableObject
     [ObservableProperty] private bool _hasOurPrice;
     public bool HasNoOurPrice => !HasOurPrice;
     partial void OnHasOurPriceChanged(bool value) => OnPropertyChanged(nameof(HasNoOurPrice));
-    [ObservableProperty] private string? _expectedPriceText;
+    [ObservableProperty] private string? _expectedPriceText;      // العادي
+    [ObservableProperty] private bool _hasOffer;                  // فيه سعر عرض؟
+    [ObservableProperty] private string? _specialPriceText;       // العرض
     [ObservableProperty] private string _actualPriceInput = "";
 
     private ValidationLookupDto? _lookup;
@@ -150,9 +152,11 @@ public partial class ValidationViewModel : ObservableObject
             _lookup = res;
             ProductName = res.ProductFound ? res.ProductName : "صنف غير معروف لنا بهذا الباركود";
             HasOurPrice = res.HasOurPrice;
-            ExpectedPriceText = res.ExpectedPriceText;
-            // نملأ الحقل بسعرنا المخزّن: إن طابق الواقع يكبس تأكيد فقط، وإلّا يعدّله.
-            ActualPriceInput = res.HasOurPrice ? res.ExpectedPrice!.Value.ToString("0.00", CultureInfo.InvariantCulture) : "";
+            HasOffer = res.HasOffer;
+            ExpectedPriceText = res.ExpectedPriceText;     // السعر العادي
+            SpecialPriceText = res.SpecialPriceText;        // سعر العرض
+            // نملأ الحقل بالسعر الفعّال (العرض إن وُجد، وإلّا العادي): إن طابق الرف يكبس تأكيد فقط.
+            ActualPriceInput = res.HasOurPrice ? res.EffectivePrice!.Value.ToString("0.00", CultureInfo.InvariantCulture) : "";
             HasLookup = true;
         }
         catch
@@ -189,15 +193,16 @@ public partial class ValidationViewModel : ObservableObject
                 BranchId      = _lookup.BranchId,
                 ProductId     = _lookup.ProductId,
                 Barcode       = (Barcode ?? "").Trim(),
-                ProductName   = _lookup.ProductFound ? _lookup.ProductName : null,
-                ExpectedPrice = _lookup.HasOurPrice ? _lookup.ExpectedPrice : null,
-                ActualPrice   = actual,
-                Latitude      = _lat,
-                Longitude     = _lng,
-                Auditor       = string.IsNullOrWhiteSpace(Auditor) ? null : Auditor.Trim(),
+                ProductName          = _lookup.ProductFound ? _lookup.ProductName : null,
+                ExpectedPrice        = _lookup.HasOurPrice ? _lookup.ExpectedPrice : null,
+                ExpectedSpecialPrice = _lookup.HasOffer ? _lookup.ExpectedSpecialPrice : null,
+                ActualPrice          = actual,
+                Latitude             = _lat,
+                Longitude            = _lng,
+                Auditor              = string.IsNullOrWhiteSpace(Auditor) ? null : Auditor.Trim(),
             });
 
-            var match = _lookup.HasOurPrice && _lookup.ExpectedPrice == actual;
+            var match = _lookup.HasOurPrice && _lookup.EffectivePrice == actual;
             StatusMessage = match ? "✓ سُجِّل: مطابق" : "✓ سُجِّل: مختلف — حُفظ الواقع";
             // تجهيز للمسح التالي (الفرع المختار يبقى كما هو).
             HasLookup = false;

@@ -60,8 +60,10 @@ public class MerchantProduct : BaseEntity
     public Guid ProductId { get; set; }
     public Product? Product { get; set; }
 
-    /// <summary>السعر شامل الضريبة (العرض للزبون شامل الضريبة — قرار 3).</summary>
+    /// <summary>السعر العادي شامل الضريبة (العرض للزبون شامل الضريبة — قرار 3).</summary>
     public decimal Price { get; set; }
+    /// <summary>سعر العرض/التخفيض شامل الضريبة (null = لا عرض). يُملأ من فهرسة طلبات.</summary>
+    public decimal? SpecialPrice { get; set; }
     public int StockQty { get; set; }
     public bool IsAvailable { get; set; } = true;
 }
@@ -157,9 +159,11 @@ public class PriceValidation : BaseEntity
     public string Barcode       { get; set; } = string.Empty;
     public string? ProductName  { get; set; }            // لقطة اسم الصنف وقت الفحص
 
-    /// <summary>السعر المخزّن عندنا للفرع وقت الفحص (null إن لم يكن للصنف سعر في هذا الفرع).</summary>
+    /// <summary>سعرنا العادي المخزّن للفرع وقت الفحص (null إن لم يكن للصنف سعر في هذا الفرع).</summary>
     public decimal? ExpectedPrice { get; set; }
-    /// <summary>السعر الحقيقي الذي أكّده/أدخله العامل.</summary>
+    /// <summary>سعر العرض المخزّن عندنا وقت الفحص (null = لا عرض مخزّن).</summary>
+    public decimal? ExpectedSpecialPrice { get; set; }
+    /// <summary>السعر الحقيقي الذي أكّده/أدخله العامل من الرف.</summary>
     public decimal ActualPrice  { get; set; }
     /// <summary>هل طابق المخزّن الواقع؟ (يُحسب وقت الفحص).</summary>
     public bool IsMatch         { get; set; }

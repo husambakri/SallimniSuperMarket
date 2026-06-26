@@ -48,7 +48,7 @@ public class ValidationController : ControllerBase
             .FirstOrDefaultAsync(ct);
 
         if (merchant is null)
-            return Ok(new ValidationLookupDto(false, null, null, null, null, false, null, null, false, null));
+            return Ok(new ValidationLookupDto(false, null, null, null, null, false, null, null, false, null, null, false));
 
         // الصنف المطابق للباركود (بطاقة الإدارة).
         var product = await _db.Products
@@ -57,13 +57,20 @@ public class ValidationController : ControllerBase
             .FirstOrDefaultAsync(ct);
 
         decimal? expected = null;
+        decimal? expectedSpecial = null;
         if (product is not null)
         {
-            // سعرنا المخزّن لهذا الصنف في هذا الفرع تحديداً.
-            expected = await _db.MerchantProducts
+            // سعرنا المخزّن لهذا الصنف في هذا الفرع تحديداً (العادي + العرض إن وُجد).
+            var mp = await _db.MerchantProducts
                 .Where(mp => mp.MerchantId == merchant.Id && mp.ProductId == product.Id)
-                .Select(mp => (decimal?)mp.Price)
+                .Select(mp => new { mp.Price, mp.SpecialPrice })
                 .FirstOrDefaultAsync(ct);
+            if (mp is not null)
+            {
+                expected = mp.Price;
+                // العرض فقط إن كان أقلّ من العادي.
+                expectedSpecial = mp.SpecialPrice is { } sp && sp > 0 && sp < mp.Price ? sp : null;
+            }
         }
 
         return Ok(new ValidationLookupDto(
@@ -76,7 +83,9 @@ public class ValidationController : ControllerBase
             ProductId: product?.Id,
             ProductName: product?.NameAr,
             HasOurPrice: expected.HasValue,
-            ExpectedPrice: expected));
+            ExpectedPrice: expected,
+            ExpectedSpecialPrice: expectedSpecial,
+            HasOffer: expectedSpecial.HasValue));
     }
 
     /// <summary>
@@ -90,19 +99,22 @@ public class ValidationController : ControllerBase
         if (barcode.Length == 0) return BadRequest(new { error = "باركود فارغ." });
         if (req.MerchantId == Guid.Empty) return BadRequest(new { error = "الفرع مطلوب." });
 
-        var isMatch = req.ExpectedPrice.HasValue && req.ExpectedPrice.Value == req.ActualPrice;
+        // المطابقة ضدّ السعر الفعّال: سعر العرض إن وُجد، وإلّا العادي.
+        var effectiveExpected = req.ExpectedSpecialPrice ?? req.ExpectedPrice;
+        var isMatch = effectiveExpected.HasValue && effectiveExpected.Value == req.ActualPrice;
 
         var row = new PriceValidation
         {
-            MerchantId    = req.MerchantId,
-            MerchantName  = req.MerchantName ?? "",
-            BranchId      = req.BranchId,
-            ProductId     = req.ProductId,
-            Barcode       = barcode,
-            ProductName   = req.ProductName,
-            ExpectedPrice = req.ExpectedPrice,
-            ActualPrice   = req.ActualPrice,
-            IsMatch       = isMatch,
+            MerchantId           = req.MerchantId,
+            MerchantName         = req.MerchantName ?? "",
+            BranchId             = req.BranchId,
+            ProductId            = req.ProductId,
+            Barcode              = barcode,
+            ProductName          = req.ProductName,
+            ExpectedPrice        = req.ExpectedPrice,
+            ExpectedSpecialPrice = req.ExpectedSpecialPrice,
+            ActualPrice          = req.ActualPrice,
+            IsMatch              = isMatch,
             Latitude      = req.Latitude,
             Longitude     = req.Longitude,
             Auditor       = req.Auditor,
@@ -139,7 +151,7 @@ public class ValidationController : ControllerBase
             .Take(500)
             .Select(v => new ValidationHistoryDto(
                 v.Id, v.Barcode, v.ProductName,
-                v.ExpectedPrice, v.ActualPrice, v.IsMatch, v.Auditor, v.CreatedAt))
+                v.ExpectedPrice, v.ExpectedSpecialPrice, v.ActualPrice, v.IsMatch, v.Auditor, v.CreatedAt))
             .ToListAsync(ct);
 
         return Ok(rows);

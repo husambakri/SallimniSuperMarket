@@ -44,17 +44,19 @@ public record CommissionConfigDto(decimal DefaultRate);
 /// <summary>متجر في قائمة الاختيار (تُثبَّت في ترويسة المسح).</summary>
 public record ValidationMerchantDto(Guid Id, string Name);
 
-/// <summary>نتيجة استعلام المسح: الفرع المختار + سعرنا المخزّن للباركود في ذلك الفرع.</summary>
+/// <summary>
+/// نتيجة استعلام المسح: الفرع المختار + سعرنا المخزّن للباركود (العادي + العرض إن وُجد).
+/// </summary>
 public record ValidationLookupDto(
     bool BranchFound, Guid? MerchantId, string? MerchantName, string? BranchId, double? DistanceKm,
     bool ProductFound, Guid? ProductId, string? ProductName,
-    bool HasOurPrice, decimal? ExpectedPrice);
+    bool HasOurPrice, decimal? ExpectedPrice, decimal? ExpectedSpecialPrice, bool HasOffer);
 
 /// <summary>طلب تسجيل تحقّق (يضيف صفّاً تاريخياً append-only؛ لا يلمس السعر الحيّ).</summary>
 public record ValidationRecordRequest(
     Guid MerchantId, string MerchantName, string? BranchId,
     Guid? ProductId, string Barcode, string? ProductName,
-    decimal? ExpectedPrice, decimal ActualPrice,
+    decimal? ExpectedPrice, decimal? ExpectedSpecialPrice, decimal ActualPrice,
     double? Latitude, double? Longitude, string? Auditor);
 
 /// <summary>فرع ظهر في سجلّ التحقّق (لمنتقي صفحة السجلّ).</summary>
@@ -63,5 +65,5 @@ public record ValidationBranchDto(Guid MerchantId, string MerchantName, int Coun
 /// <summary>صفّ في سجلّ تحقّقات فرع.</summary>
 public record ValidationHistoryDto(
     Guid Id, string Barcode, string? ProductName,
-    decimal? ExpectedPrice, decimal ActualPrice, bool IsMatch,
+    decimal? ExpectedPrice, decimal? ExpectedSpecialPrice, decimal ActualPrice, bool IsMatch,
     string? Auditor, DateTimeOffset CreatedAt);

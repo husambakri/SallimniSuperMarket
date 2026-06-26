@@ -26,11 +26,17 @@ public class ValidationLookupDto
     public string? ProductName { get; set; }
 
     public bool HasOurPrice { get; set; }
-    public decimal? ExpectedPrice { get; set; }
+    public decimal? ExpectedPrice { get; set; }          // العادي
+    public decimal? ExpectedSpecialPrice { get; set; }   // العرض (إن وُجد)
+    public bool HasOffer { get; set; }
 
     public string DistanceText => DistanceKm is null ? ""
         : DistanceKm < 1 ? $"يبعد {DistanceKm * 1000:0} م" : $"يبعد {DistanceKm:0.0} كم";
     public string ExpectedPriceText => ExpectedPrice?.ToString("0.00", CultureInfo.InvariantCulture) ?? "—";
+    public string SpecialPriceText => ExpectedSpecialPrice?.ToString("0.00", CultureInfo.InvariantCulture) ?? "—";
+    /// <summary>السعر الفعّال المتوقّع: العرض إن وُجد، وإلّا العادي.</summary>
+    public decimal? EffectivePrice => HasOffer ? ExpectedSpecialPrice : ExpectedPrice;
+    public string EffectivePriceText => EffectivePrice?.ToString("0.00", CultureInfo.InvariantCulture) ?? "";
 }
 
 /// <summary>طلب تسجيل تحقّق (يضيف صفّاً تاريخياً؛ لا يلمس السعر الحيّ).</summary>
@@ -43,6 +49,7 @@ public class ValidationRecordRequest
     public string Barcode { get; set; } = "";
     public string? ProductName { get; set; }
     public decimal? ExpectedPrice { get; set; }
+    public decimal? ExpectedSpecialPrice { get; set; }
     public decimal ActualPrice { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
@@ -67,6 +74,7 @@ public class ValidationHistoryDto
     public string Barcode { get; set; } = "";
     public string? ProductName { get; set; }
     public decimal? ExpectedPrice { get; set; }
+    public decimal? ExpectedSpecialPrice { get; set; }
     public decimal ActualPrice { get; set; }
     public bool IsMatch { get; set; }
     public string? Auditor { get; set; }
@@ -74,8 +82,17 @@ public class ValidationHistoryDto
 
     // مشتقّات العرض.
     public string Title => string.IsNullOrWhiteSpace(ProductName) ? Barcode : ProductName!;
-    public string ExpectedText => ExpectedPrice is null ? "بلا سعر مخزّن"
-        : $"سعرنا {ExpectedPrice.Value.ToString("0.00", CultureInfo.InvariantCulture)}";
+    public string ExpectedText
+    {
+        get
+        {
+            if (ExpectedPrice is null) return "بلا سعر مخزّن";
+            var reg = ExpectedPrice.Value.ToString("0.00", CultureInfo.InvariantCulture);
+            return ExpectedSpecialPrice is { } sp
+                ? $"سعرنا {reg} (عرض {sp.ToString("0.00", CultureInfo.InvariantCulture)})"
+                : $"سعرنا {reg}";
+        }
+    }
     public string ActualText => $"الواقع {ActualPrice.ToString("0.00", CultureInfo.InvariantCulture)}";
     public string StatusText => IsMatch ? "مطابق" : "مختلف";
     public string StatusGlyph => IsMatch ? "✓" : "✕";

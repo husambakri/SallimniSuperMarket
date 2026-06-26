@@ -110,13 +110,24 @@
                                TextColor="{StaticResource Gray900}" HorizontalTextAlignment="Center"
                                MaxLines="2" LineBreakMode="TailTruncation" />
 
-                        <!-- سعرنا المخزّن -->
-                        <VerticalStackLayout Spacing="3" HorizontalOptions="Center" IsVisible="{Binding HasOurPrice}">
+                        <!-- سعرنا المخزّن: العادي + العرض (إن وُجد) -->
+                        <VerticalStackLayout Spacing="7" HorizontalOptions="Center" IsVisible="{Binding HasOurPrice}">
                             <Label Text="سعرنا المخزّن في هذا الفرع" FontSize="11.5" TextColor="{StaticResource Gray500}" HorizontalOptions="Center" />
-                            <HorizontalStackLayout Spacing="5" HorizontalOptions="Center">
-                                <Label Text="{Binding ExpectedPriceText}" FontSize="34" FontAttributes="Bold" TextColor="{StaticResource Primary}" />
-                                <Label Text="د.أ" FontSize="14" TextColor="{StaticResource Gray500}" VerticalOptions="End" Margin="0,0,0,7" />
+                            <!-- العادي -->
+                            <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
+                                <Label Text="العادي" FontSize="12.5" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
+                                <Label Text="{Binding ExpectedPriceText}" FontSize="28" FontAttributes="Bold" TextColor="{StaticResource Gray900}" />
+                                <Label Text="د.أ" FontSize="12.5" TextColor="{StaticResource Gray500}" VerticalOptions="End" Margin="0,0,0,5" />
                             </HorizontalStackLayout>
+                            <!-- العرض -->
+                            <Border IsVisible="{Binding HasOffer}" BackgroundColor="{StaticResource Accent}" StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 16" Padding="14,7" HorizontalOptions="Center">
+                                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                    <Label Text="🏷️ عرض" FontSize="12.5" FontAttributes="Bold" TextColor="White" VerticalOptions="Center" />
+                                    <Label Text="{Binding SpecialPriceText}" FontSize="24" FontAttributes="Bold" TextColor="White" />
+                                    <Label Text="د.أ" FontSize="11.5" TextColor="White" VerticalOptions="End" Margin="0,0,0,3" />
+                                </HorizontalStackLayout>
+                            </Border>
                         </VerticalStackLayout>
 
                         <Label IsVisible="{Binding HasNoOurPrice}"
