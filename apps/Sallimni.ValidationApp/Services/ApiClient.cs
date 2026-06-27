@@ -35,6 +35,10 @@ public class ApiClient
         }
     }
 
+    /// <summary>لقطة حالة القاعدة (تبويب "القاعدة").</summary>
+    public async Task<ValidationStatsDto?> StatsAsync(CancellationToken ct = default)
+        => await _http.GetFromJsonAsync<ValidationStatsDto>("api/validation/stats", JsonOpts, ct);
+
     /// <summary>الفروع التي ظهرت في سجلّ التحقّق.</summary>
     public async Task<List<ValidationBranchDto>> BranchesAsync(CancellationToken ct = default)
         => await _http.GetFromJsonAsync<List<ValidationBranchDto>>("api/validation/branches", JsonOpts, ct)

@@ -39,6 +39,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<ScanPage>();
         builder.Services.AddTransient<HistoryViewModel>();
         builder.Services.AddTransient<HistoryPage>();
+        builder.Services.AddTransient<InfoViewModel>();
+        builder.Services.AddTransient<InfoPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();

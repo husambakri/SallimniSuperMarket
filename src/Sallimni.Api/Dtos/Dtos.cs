@@ -62,6 +62,15 @@ public record ValidationRecordRequest(
 /// <summary>فرع ظهر في سجلّ التحقّق (لمنتقي صفحة السجلّ).</summary>
 public record ValidationBranchDto(Guid MerchantId, string MerchantName, int Count, DateTimeOffset LastAt);
 
+/// <summary>
+/// لقطة حالة قاعدة البيانات لتطبيق التحقّق: حجم الكتالوج، آخر تحديث للأسعار وكم تغيّر فيه،
+/// وملخّص عمليات التحقّق — ليعرف العامل هل البيانات التي يفحص ضدّها حديثة.
+/// </summary>
+public record ValidationStatsDto(
+    int Products, int Merchants, int PricedItems, int Offers,
+    DateTimeOffset? LastPriceUpdate, int UpdatedLast24h,
+    int Validations, int Mismatches, DateTimeOffset? LastValidation);
+
 /// <summary>صفّ في سجلّ تحقّقات فرع.</summary>
 public record ValidationHistoryDto(
     Guid Id, string Barcode, string? ProductName,

@@ -12,6 +12,8 @@
             ContentTemplate="{DataTemplate views:ScanPage}" Route="scan" />
         <ShellContent Title="السجلّ"
             ContentTemplate="{DataTemplate views:HistoryPage}" Route="history" />
+        <ShellContent Title="القاعدة"
+            ContentTemplate="{DataTemplate views:InfoPage}" Route="info" />
     </TabBar>
 
 </Shell>

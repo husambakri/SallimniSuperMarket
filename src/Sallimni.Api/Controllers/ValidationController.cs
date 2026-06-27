@@ -150,6 +150,41 @@ public class ValidationController : ControllerBase
         return Ok(branches);
     }
 
+    /// <summary>
+    /// لقطة حالة القاعدة: عدد الأصناف/المتاجر/الأسعار، آخر تحديث سعر وكم صنف تغيّر آخر 24 ساعة،
+    /// وملخّص عمليات التحقّق — يعرضها التطبيق ليطمئنّ العامل لحداثة البيانات.
+    /// </summary>
+    [HttpGet("stats")]
+    public async Task<IActionResult> Stats(CancellationToken ct)
+    {
+        var since = DateTimeOffset.UtcNow.AddHours(-24);
+
+        var products  = await _db.Products.CountAsync(p => p.IsActive, ct);
+        var merchants = await _db.Merchants.CountAsync(m => m.IsActive, ct);
+        var priced    = await _db.MerchantProducts.CountAsync(ct);
+        var offers    = await _db.MerchantProducts.CountAsync(mp => mp.SpecialPrice != null && mp.SpecialPrice > 0, ct);
+
+        // آخر تحديث سعر (UpdatedAt إن وُجد وإلّا CreatedAt) + كم صنف تحدّث آخر 24 ساعة.
+        var lastPriceUpdate = await _db.MerchantProducts
+            .Select(mp => mp.UpdatedAt ?? mp.CreatedAt)
+            .OrderByDescending(d => d)
+            .FirstOrDefaultAsync(ct);
+        var updatedLast24h = await _db.MerchantProducts
+            .CountAsync(mp => (mp.UpdatedAt ?? mp.CreatedAt) >= since, ct);
+
+        var validations = await _db.PriceValidations.CountAsync(ct);
+        var mismatches  = await _db.PriceValidations.CountAsync(v => !v.IsMatch, ct);
+        var lastValidation = await _db.PriceValidations
+            .OrderByDescending(v => v.CreatedAt)
+            .Select(v => (DateTimeOffset?)v.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+        return Ok(new ValidationStatsDto(
+            products, merchants, priced, offers,
+            lastPriceUpdate == default ? null : lastPriceUpdate, updatedLast24h,
+            validations, mismatches, lastValidation));
+    }
+
     /// <summary>سجلّ تحقّقات فرع واحد، الأحدث أولاً.</summary>
     [HttpGet("history")]
     public async Task<IActionResult> History([FromQuery] Guid merchantId, CancellationToken ct)

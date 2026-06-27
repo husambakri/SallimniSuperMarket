@@ -67,6 +67,52 @@ public class ValidationBranchDto
     public string Display => $"{MerchantName}  ({Count})";
 }
 
+/// <summary>لقطة حالة قاعدة البيانات (تبويب "القاعدة").</summary>
+public class ValidationStatsDto
+{
+    public int Products { get; set; }
+    public int Merchants { get; set; }
+    public int PricedItems { get; set; }
+    public int Offers { get; set; }
+    public DateTimeOffset? LastPriceUpdate { get; set; }
+    public int UpdatedLast24h { get; set; }
+    public int Validations { get; set; }
+    public int Mismatches { get; set; }
+    public DateTimeOffset? LastValidation { get; set; }
+
+    // مشتقّات العرض.
+    public string ProductsText  => Products.ToString("N0", CultureInfo.InvariantCulture);
+    public string MerchantsText => Merchants.ToString("N0", CultureInfo.InvariantCulture);
+    public string PricedText    => PricedItems.ToString("N0", CultureInfo.InvariantCulture);
+    public string OffersText    => Offers.ToString("N0", CultureInfo.InvariantCulture);
+    public string ValidationsText => Validations.ToString("N0", CultureInfo.InvariantCulture);
+    public string MismatchesText  => Mismatches.ToString("N0", CultureInfo.InvariantCulture);
+
+    public string LastUpdateRelative => Relative(LastPriceUpdate);
+    public string LastUpdateAbsolute => Absolute(LastPriceUpdate);
+    public string LastValidationRelative => Relative(LastValidation);
+
+    /// <summary>هل حدثت تغييرات في آخر 24 ساعة؟ (مؤشّر حداثة البيانات).</summary>
+    public bool HasRecentChanges => UpdatedLast24h > 0;
+    public string ChangesText => HasRecentChanges
+        ? $"نعم — {UpdatedLast24h.ToString("N0", CultureInfo.InvariantCulture)} صنف تحدّث في آخر 24 ساعة"
+        : "لا تغييرات في آخر 24 ساعة";
+
+    private static string Relative(DateTimeOffset? when)
+    {
+        if (when is null) return "—";
+        var d = DateTimeOffset.UtcNow - when.Value;
+        if (d.TotalSeconds < 60) return "الآن";
+        if (d.TotalMinutes < 60) return $"منذ {(int)d.TotalMinutes} دقيقة";
+        if (d.TotalHours   < 24) return $"منذ {(int)d.TotalHours} ساعة";
+        if (d.TotalDays    < 30) return $"منذ {(int)d.TotalDays} يوم";
+        return when.Value.ToLocalTime().ToString("yyyy-MM-dd");
+    }
+
+    private static string Absolute(DateTimeOffset? when)
+        => when?.ToLocalTime().ToString("yyyy-MM-dd  HH:mm") ?? "—";
+}
+
 /// <summary>صفّ في سجلّ تحقّقات فرع.</summary>
 public class ValidationHistoryDto
 {

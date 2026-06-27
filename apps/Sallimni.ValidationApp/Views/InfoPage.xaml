@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Sallimni.ValidationApp.ViewModels"
+             x:Class="Sallimni.ValidationApp.Views.InfoPage"
+             x:DataType="vm:InfoViewModel"
+             FlowDirection="RightToLeft"
+             BackgroundColor="{StaticResource PageBg}"
+             Title="القاعدة">
+
+    <Grid Padding="16,12,16,14" RowSpacing="12" RowDefinitions="Auto,*">
+
+        <!-- الترويسة -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <VerticalStackLayout Grid.Column="0" Spacing="1">
+                <Label Text="حالة القاعدة" FontSize="21" FontAttributes="Bold" TextColor="{StaticResource Primary}" />
+                <Label Text="حداثة البيانات التي تفحص ضدّها" FontSize="12" TextColor="{StaticResource Gray500}" />
+            </VerticalStackLayout>
+            <Button Grid.Column="1" Text="↻" Command="{Binding RefreshCommand}"
+                    BackgroundColor="Transparent" TextColor="{StaticResource Primary}"
+                    FontSize="22" FontAttributes="Bold" Padding="8,0" VerticalOptions="Center" />
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="12">
+
+                <!-- آخر تحديث للأسعار -->
+                <Border IsVisible="{Binding HasStats}" StrokeShape="RoundRectangle 20" StrokeThickness="1"
+                        Stroke="{StaticResource Gray100}" BackgroundColor="{StaticResource Surface}" Padding="18,16">
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="آخر تحديث للأسعار" FontSize="12.5" TextColor="{StaticResource Gray500}" />
+                        <Label Text="{Binding Stats.LastUpdateRelative}" FontSize="26" FontAttributes="Bold"
+                               TextColor="{StaticResource Gray900}" />
+                        <Label Text="{Binding Stats.LastUpdateAbsolute}" FontSize="12" TextColor="{StaticResource Gray400}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- هل في تغييرات؟ (مؤشّر حداثة) -->
+                <Border IsVisible="{Binding HasStats}" StrokeShape="RoundRectangle 18" StrokeThickness="0"
+                        BackgroundColor="{StaticResource Surface}" Padding="0">
+                    <Grid>
+                        <Border StrokeShape="RoundRectangle 18" StrokeThickness="1.5"
+                                Stroke="{StaticResource Gray100}" BackgroundColor="{StaticResource Surface}" Padding="16,14">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                                <Label Grid.Column="0" Text="🔄" FontSize="24" VerticalOptions="Center" />
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                    <Label Text="تغييرات التحديث الأخير" FontSize="12.5" TextColor="{StaticResource Gray500}" />
+                                    <Label Text="{Binding Stats.ChangesText}" FontSize="14.5" FontAttributes="Bold"
+                                           TextColor="{StaticResource Gray900}" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- بطاقات الأرقام -->
+                <Grid IsVisible="{Binding HasStats}" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto"
+                      ColumnSpacing="12" RowSpacing="12">
+
+                    <!-- الأصناف -->
+                    <Border Grid.Row="0" Grid.Column="0" StrokeShape="RoundRectangle 18" StrokeThickness="1"
+                            Stroke="{StaticResource Gray100}" BackgroundColor="{StaticResource Surface}" Padding="16,14">
+                        <VerticalStackLayout Spacing="3">
+                            <Label Text="📦 الأصناف" FontSize="12" TextColor="{StaticResource Gray500}" />
+                            <Label Text="{Binding Stats.ProductsText}" FontSize="24" FontAttributes="Bold" TextColor="{StaticResource Gray900}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- المتاجر -->
+                    <Border Grid.Row="0" Grid.Column="1" StrokeShape="RoundRectangle 18" StrokeThickness="1"
+                            Stroke="{StaticResource Gray100}" BackgroundColor="{StaticResource Surface}" Padding="16,14">
+                        <VerticalStackLayout Spacing="3">
+                            <Label Text="🏪 المتاجر" FontSize="12" TextColor="{StaticResource Gray500}" />
+                            <Label Text="{Binding Stats.MerchantsText}" FontSize="24" FontAttributes="Bold" TextColor="{StaticResource Gray900}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- الأسعار المخزّنة -->
+                    <Border Grid.Row="1" Grid.Column="0" StrokeShape="RoundRectangle 18" StrokeThickness="1"
+                            Stroke="{StaticResource Gray100}" BackgroundColor="{StaticResource Surface}" Padding="16,14">
+                        <VerticalStackLayout Spacing="3">
+                            <Label Text="🏷️ أسعار مخزّنة" FontSize="12" TextColor="{StaticResource Gray500}" />
+                            <Label Text="{Binding Stats.PricedText}" FontSize="24" FontAttributes="Bold" TextColor="{StaticResource Gray900}" />
+                            <Label Text="{Binding Stats.OffersText, StringFormat='منها {0} عرض'}" FontSize="11" TextColor="{StaticResource Accent}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- عمليات التحقّق -->
+                    <Border Grid.Row="1" Grid.Column="1" StrokeShape="RoundRectangle 18" StrokeThickness="1"
+                            Stroke="{StaticResource Gray100}" BackgroundColor="{StaticResource Surface}" Padding="16,14">
+                        <VerticalStackLayout Spacing="3">
+                            <Label Text="✓ عمليات تحقّق" FontSize="12" TextColor="{StaticResource Gray500}" />
+                            <Label Text="{Binding Stats.ValidationsText}" FontSize="24" FontAttributes="Bold" TextColor="{StaticResource Gray900}" />
+                            <Label Text="{Binding Stats.MismatchesText, StringFormat='منها {0} مختلف'}" FontSize="11" TextColor="{StaticResource Gray400}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </Grid>
+
+                <!-- آخر تحقّق -->
+                <Border IsVisible="{Binding HasStats}" StrokeShape="RoundRectangle 16" StrokeThickness="1"
+                        Stroke="{StaticResource Gray100}" BackgroundColor="{StaticResource Surface}" Padding="16,12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="آخر عملية تحقّق" FontSize="13" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="{Binding Stats.LastValidationRelative}" FontSize="13.5" FontAttributes="Bold"
+                               TextColor="{StaticResource Gray900}" VerticalOptions="Center" />
+                    </Grid>
+                </Border>
+
+                <!-- خطأ -->
+                <Border IsVisible="{Binding HasError}" StrokeShape="RoundRectangle 18" StrokeThickness="1"
+                        Stroke="{StaticResource Gray100}" BackgroundColor="{StaticResource Surface}" Padding="20" Margin="0,30,0,0">
+                    <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
+                        <Label Text="⚠️" FontSize="30" HorizontalOptions="Center" />
+                        <Label Text="{Binding ErrorMessage}" FontSize="14" TextColor="{StaticResource Gray600}"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- انتظار -->
+                <VerticalStackLayout IsVisible="{Binding IsBusy}" Spacing="8" Margin="0,30,0,0">
+                    <ActivityIndicator IsRunning="{Binding IsBusy}" Color="{StaticResource Primary}" />
+                    <Label Text="جارٍ جلب الحالة…" FontSize="13" TextColor="{StaticResource Gray500}" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>
